@@ -37,9 +37,10 @@ export const App: React.FC = () => {
   const [selectedEvidenceModal, setSelectedEvidenceModal] = useState<Evidence | null>(null);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
 
-  const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string }>({
+  const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string; isBackend?: boolean }>({
     provider: 'demo',
-    model: 'deterministic-demo',
+    model: 'deterministic-browser-engine',
+    isBackend: false,
   });
 
   // Cached analysis state
@@ -50,13 +51,17 @@ export const App: React.FC = () => {
 
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState<boolean>(false);
 
-  // Initialize readiness
-  useEffect(() => {
+  const loadProviderInfo = () => {
     checkReadiness()
       .then((ready) => {
-        setProviderInfo({ provider: ready.provider, model: ready.model });
+        setProviderInfo({ provider: ready.provider, model: ready.model, isBackend: ready.isBackend });
       })
       .catch(() => {});
+  };
+
+  // Initialize readiness
+  useEffect(() => {
+    loadProviderInfo();
 
     // Try to load any existing document in memory
     listDocuments().then(async (docs) => {
@@ -127,6 +132,7 @@ export const App: React.FC = () => {
         onOpenUpload={() => setShowUploadModal(true)}
         isDemo={providerInfo.provider === 'demo'}
         providerInfo={providerInfo}
+        onRefreshProvider={loadProviderInfo}
       />
 
       {/* Main Content Area */}

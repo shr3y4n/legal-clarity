@@ -1,12 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 
-const APP_URL = 'http://127.0.0.1:8000/';
+const APP_URL = '/';
 
 async function ensureDocumentLoaded(page: Page) {
   await page.goto(APP_URL);
   const isOutlineVisible = await page.getByText('Document Outline').isVisible().catch(() => false);
   if (!isOutlineVisible) {
-    await page.getByRole('button', { name: /Residential Lease/i }).click();
+    await page.getByRole('button', { name: /Residential Lease/i }).first().click();
     await expect(page.getByText('Document Outline')).toBeVisible({ timeout: 10000 });
   }
 }

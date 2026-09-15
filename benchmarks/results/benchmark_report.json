@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-15T03:46:24.873455+00:00",
+  "timestamp": "2026-09-15T17:44:21.442979+00:00",
   "summary": {
     "total_test_points": 25,
     "passed_test_points": 25,
@@ -15,7 +15,7 @@
     "security_defense_rate": 100.0
   },
   "performance_ms": {
-    "avg_extraction_time_ms": 4.3,
+    "avg_extraction_time_ms": 5.7,
     "avg_qa_response_time_ms": 0.1
   }
 }

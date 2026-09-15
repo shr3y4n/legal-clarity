@@ -3,10 +3,22 @@
 > **An evidence-grounded legal document companion designed for non-lawyers.**
 > Built around traceability, deterministic verification, safe failure, and legal safety boundaries.
 
+[![Deploy to GitHub Pages](https://github.com/shr3y4n/legal-clarity/actions/workflows/deploy.yml/badge.svg)](https://github.com/shr3y4n/legal-clarity/actions/workflows/deploy.yml)
+[![Live Demo](https://img.shields.io/badge/Live%20Website-GitHub%20Pages-2ea44f?logo=github)](https://shr3y4n.github.io/legal-clarity/)
 [![Tests](https://img.shields.io/badge/pytest-29%20passed-success)](tests/)
 [![Benchmark](https://img.shields.io/badge/grounding%20benchmark-100%25-brightgreen)](BENCHMARK.md)
 [![Accessibility](https://img.shields.io/badge/WCAG-2.1%20AA%20Compliant-blue)](docs/ACCESSIBILITY.md)
 [![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
+
+---
+
+### 🌐 Live Static Website on GitHub Pages
+Legal Clarity is available as an in-browser static web application hosted on GitHub Pages:
+👉 **[https://shr3y4n.github.io/legal-clarity/](https://shr3y4n.github.io/legal-clarity/)**
+
+- **Zero-Backend Required**: Operates with a client-side deterministic legal engine directly in your browser.
+- **Preloaded Benchmark Agreements**: Instantly test Residential Leases (with version comparison), Mutual NDAs, and Master Services Agreements (with prompt injection defense).
+- **Optional Direct Gemini API**: Users can enter their personal Google Gemini API key to run live neural analyses client-side without storing keys on any server.
 
 ---
 

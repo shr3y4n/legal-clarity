@@ -1,6 +1,6 @@
 # Legal Clarity - Benchmark & Verification Report
 
-*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-15 03:46:24 UTC*
+*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-15 17:44:21 UTC*
 
 ## Executive Summary
 
@@ -25,7 +25,7 @@ Legal Clarity was evaluated against an adversarial synthetic legal benchmark dat
 - **Overall Benchmark Pass Rate**: **100.0%**
 
 ### Performance Benchmarks
-- **Average Document Extraction Latency**: `4.3 ms`
+- **Average Document Extraction Latency**: `5.7 ms`
 - **Average Grounded Q&A Response Latency**: `0.1 ms`
 
 ### Test Categories Evaluated

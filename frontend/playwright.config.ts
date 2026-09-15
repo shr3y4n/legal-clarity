@@ -7,8 +7,13 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:8000',
+    baseURL: 'http://localhost:4173',
     trace: 'off',
+  },
+  webServer: {
+    command: 'npm run preview -- --port 4173',
+    port: 4173,
+    reuseExistingServer: true,
   },
   projects: [
     {
