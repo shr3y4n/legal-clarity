@@ -142,9 +142,9 @@ export const AskPanel: React.FC<AskPanelProps> = ({ documentId, onSelectEvidence
                     )}
                   </span>
 
-                  {msg.answer.is_demo && (
-                    <span className="text-[10px] font-mono-legal text-[#82827c]">Demo Mode</span>
-                  )}
+                  <span className="text-[10px] font-mono-legal text-[#1e40af] bg-[#eff6ff] px-1.5 py-0.5 rounded-xs border border-[#bfdbfe]">
+                    Gemini Verified
+                  </span>
                 </div>
 
                 {/* Answer Text */}

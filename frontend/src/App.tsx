@@ -38,8 +38,8 @@ export const App: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
 
   const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string; isBackend?: boolean }>({
-    provider: 'demo',
-    model: 'deterministic-browser-engine',
+    provider: 'gemini',
+    model: 'Gemini 2.5 Flash',
     isBackend: false,
   });
 

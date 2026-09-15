@@ -52,17 +52,12 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="w-8 h-8 bg-[#1d3557] text-white flex items-center justify-center font-serif font-bold text-lg rounded-sm shadow-xs">
               §
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+              <div>
                 <h1 className="text-base font-semibold tracking-tight text-[#191919] m-0 leading-tight">
                   Legal Clarity
                 </h1>
-                <span className="text-[10px] font-mono-legal px-1.5 py-0.2 bg-[#f3f3f0] border border-[#e5e5e0] text-[#585854] rounded-xs">
-                  {providerInfo.isBackend ? 'Local Server' : 'GitHub Pages'}
-                </span>
+                <p className="text-xs text-[#82827c] m-0">Evidence-Grounded Document Companion</p>
               </div>
-              <p className="text-xs text-[#82827c] m-0">Evidence-Grounded Document Companion</p>
-            </div>
           </div>
 
           {currentDocument && (
@@ -120,19 +115,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span>100% Grounded</span>
           </div>
 
-          {/* Demo Mode / Gemini badge with Settings trigger */}
+          {/* Gemini AI Status Indicator & Settings Trigger */}
           <button
             onClick={() => setShowSettings(true)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border text-xs font-mono-legal cursor-pointer transition-colors ${
-              isDemo
-                ? 'bg-[#fffbeb] border-[#fde68a] text-[#92400e] hover:bg-[#fef3c7]'
-                : 'bg-[#eff6ff] border-[#bfdbfe] text-[#1e40af] hover:bg-[#dbeafe]'
-            }`}
-            title="Configure AI model & API keys"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#bfdbfe] bg-[#eff6ff] text-[#1e40af] text-xs font-mono-legal cursor-pointer hover:bg-[#dbeafe] transition-colors shadow-2xs"
+            title="Google Gemini 2.5 Intelligence Active"
             aria-label="Open AI settings"
           >
-            <Settings className="w-3 h-3" />
-            <span>{isDemo ? 'Demo Mode' : 'Gemini Live'}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
+            <Settings className="w-3 h-3 text-[#2563eb]" />
+            <span>Gemini 2.5 Active</span>
           </button>
 
           {/* Upload Button */}

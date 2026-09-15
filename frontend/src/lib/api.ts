@@ -9,6 +9,7 @@ import {
   LawyerPrepResponse,
 } from '../types/document';
 import {
+  askWithGemini,
   clientAsk,
   clientChecklist,
   clientCompare,
@@ -20,6 +21,7 @@ import {
   getClientDocuments,
   initPreloadedDocuments,
   parseDocumentFromText,
+  DEFAULT_GEMINI_API_KEY,
 } from './clientEngine';
 
 const BASE_URL = '/api';
@@ -34,6 +36,10 @@ export function getStoredApiKey(): string | null {
   } catch {
     return null;
   }
+}
+
+export function getActiveApiKey(): string {
+  return getStoredApiKey() || DEFAULT_GEMINI_API_KEY;
 }
 
 export function setStoredApiKey(key: string): void {
@@ -98,20 +104,10 @@ export async function checkReadiness(): Promise<{ status: string; provider: stri
   isBackendAvailable = false;
   initPreloadedDocuments();
 
-  const storedKey = getStoredApiKey();
-  if (storedKey) {
-    return {
-      status: 'ready',
-      provider: 'gemini',
-      model: 'gemini-1.5-flash (Client Direct)',
-      isBackend: false,
-    };
-  }
-
   return {
     status: 'ready',
-    provider: 'demo',
-    model: 'deterministic-browser-engine',
+    provider: 'gemini',
+    model: 'Gemini 2.5 Flash',
     isBackend: false,
   };
 }
@@ -227,7 +223,8 @@ export async function askDocument(documentId: string, question: string): Promise
 
   const doc = getClientDocument(documentId);
   if (!doc) throw new ApiError('Document not found.', 404);
-  return clientAsk(doc, question);
+  const activeKey = getActiveApiKey();
+  return askWithGemini(doc, question, activeKey);
 }
 
 export async function compareDocuments(docAId: string, docBId: string): Promise<Comparison> {

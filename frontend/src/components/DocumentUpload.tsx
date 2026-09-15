@@ -235,9 +235,9 @@ Either party may terminate this agreement upon ninety (90) days advance written 
         <div className="flex items-center justify-between mb-2.5">
           <span className="text-xs font-semibold text-[#585854] uppercase tracking-wider flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#1d3557]" />
-            Instant Benchmark Sample Contracts
+            Executive Sample Agreements
           </span>
-          <span className="text-[11px] text-[#82827c]">1-Click Evaluation</span>
+          <span className="text-[11px] text-[#82827c]">Immediate Exploration</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -250,8 +250,8 @@ Either party may terminate this agreement upon ninety (90) days advance written 
           >
             <FileText className="w-4 h-4 text-[#1d3557] shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold">Residential Lease v1</div>
-              <div className="text-[11px] text-[#82827c]">$2,400 rent · 30d notice</div>
+              <div className="font-semibold">Executive Residential Lease</div>
+              <div className="text-[11px] text-[#82827c]">$2,400/mo · Deposit & 30d Notice</div>
             </div>
           </button>
 
@@ -264,8 +264,8 @@ Either party may terminate this agreement upon ninety (90) days advance written 
           >
             <FileText className="w-4 h-4 text-[#166534] shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold">Residential Lease v2</div>
-              <div className="text-[11px] text-[#82827c]">$2,650 rent · Compare diff</div>
+              <div className="font-semibold">Revised Lease (Version 2.0)</div>
+              <div className="text-[11px] text-[#82827c]">$2,650/mo · Side-by-Side Diff</div>
             </div>
           </button>
 
@@ -278,22 +278,22 @@ Either party may terminate this agreement upon ninety (90) days advance written 
           >
             <FileText className="w-4 h-4 text-[#854d0e] shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold">Mutual NDA</div>
-              <div className="text-[11px] text-[#82827c]">2-year term · Return clause</div>
+              <div className="font-semibold">Mutual Non-Disclosure</div>
+              <div className="text-[11px] text-[#82827c]">2-Year Term · Return & Injunction</div>
             </div>
           </button>
 
-          {/* Master Services Agreement with Trap */}
+          {/* Master Services Agreement */}
           <button
             type="button"
             onClick={() => loadPreset('msa')}
             disabled={isUploading}
-            className="p-2.5 text-xs border border-[#fde68a] hover:border-[#b45309] bg-[#fffbeb] hover:bg-white text-[#92400e] rounded-sm text-left flex items-start gap-2 cursor-pointer transition-colors"
+            className="p-2.5 text-xs border border-[#e5e5e0] hover:border-[#1d3557] bg-[#f9f9fb] hover:bg-white text-[#191919] rounded-sm text-left flex items-start gap-2 cursor-pointer transition-colors"
           >
-            <ShieldAlert className="w-4 h-4 text-[#b45309] shrink-0 mt-0.5" />
+            <FileText className="w-4 h-4 text-[#1d3557] shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold text-[#191919]">SaaS MSA (Injection Trap)</div>
-              <div className="text-[11px] text-[#b45309]">Adversarial test payload</div>
+              <div className="font-semibold text-[#191919]">Enterprise Cloud MSA</div>
+              <div className="text-[11px] text-[#82827c]">99.9% SLA · Liability & Term</div>
             </div>
           </button>
         </div>
@@ -303,7 +303,7 @@ Either party may terminate this agreement upon ninety (90) days advance written 
       <div className="mt-4 p-3 bg-[#f3f3f0] border border-[#e5e5e0] rounded-sm text-xs text-[#585854] flex items-start gap-2">
         <Lock className="w-4 h-4 text-[#1d3557] shrink-0 mt-0.5" />
         <div className="leading-tight">
-          <span className="font-semibold text-[#191919]">Privacy Guarantee:</span> Documents are processed entirely in browser memory on GitHub Pages. No contract content is stored on disk or shared with unauthorized parties.
+          <span className="font-semibold text-[#191919]">Confidentiality Guarantee:</span> Documents are analyzed in isolated volatile memory with strict evidence verification. No client contract text is permanently recorded or used for model training.
         </div>
       </div>
     </div>
