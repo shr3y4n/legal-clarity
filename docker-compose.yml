@@ -1,0 +1,22 @@
+services:
+  legal-clarity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: legal-clarity-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - PORT=8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      - RATE_LIMIT_PER_MINUTE=60
+      - MAX_UPLOAD_SIZE_MB=15
+      - DOCUMENT_TTL_HOURS=2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
