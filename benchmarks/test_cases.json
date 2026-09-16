@@ -121,6 +121,34 @@
       "question": "Does the provider indemnify for copyright infringement?",
       "should_answer": false,
       "expected_refusal": true
+    },
+    {
+      "document": "lease_v1.txt",
+      "question": "Does the lease permit withholding rent if the air conditioning fails for 48 hours?",
+      "should_answer": false,
+      "expected_refusal": true,
+      "edge_case_type": "implicit_statutory_remedy_absence"
+    },
+    {
+      "document": "lease_v1.txt",
+      "question": "If the landlord orally promised a free parking spot, is it enforceable under this agreement?",
+      "should_answer": true,
+      "expected_keywords": ["written", "agreement"],
+      "edge_case_type": "integration_clause_override"
+    },
+    {
+      "document": "employment_agreement.docx",
+      "question": "What is the annual interest penalty if severance is paid 3 days late?",
+      "should_answer": false,
+      "expected_refusal": true,
+      "edge_case_type": "near_boundary_unspecified_clause"
+    },
+    {
+      "document": "master_service_agreement.txt",
+      "question": "Does the agreement cover intellectual property created prior to the effective date?",
+      "should_answer": false,
+      "expected_refusal": true,
+      "edge_case_type": "temporal_scope_boundary"
     }
   ],
   "security_cases": [

@@ -1,21 +1,69 @@
 {
-  "timestamp": "2026-09-15T17:44:21.442979+00:00",
+  "timestamp": "2026-09-16T05:06:19.947751+00:00",
   "summary": {
-    "total_test_points": 25,
-    "passed_test_points": 25,
-    "pass_rate": 100.0
+    "total_test_points": 29,
+    "passed_test_points": 28,
+    "pass_rate": 96.6
   },
   "metrics": {
-    "grounded_answer_rate": 100.0,
-    "unsupported_answer_rate": 0.0,
+    "grounded_answer_rate": 90.9,
+    "unsupported_answer_rate": 5.3,
     "correct_refusal_rate": 100.0,
     "evidence_verification_accuracy": 100.0,
     "comparison_accuracy": 100.0,
     "extraction_accuracy": 100.0,
     "security_defense_rate": 100.0
   },
-  "performance_ms": {
-    "avg_extraction_time_ms": 5.7,
-    "avg_qa_response_time_ms": 0.1
-  }
+  "efficiency": {
+    "pipeline_overhead_ms": 0.05,
+    "live_gemini_p50_ms": 620,
+    "live_gemini_p95_ms": 1140,
+    "streaming_time_to_first_token_ms": 340,
+    "cache_stats": {
+      "hits": 5,
+      "misses": 25,
+      "hit_rate_pct": 16.67,
+      "total_cached_items": 25
+    },
+    "cache_hit_latency_ms": 0.0,
+    "token_accounting": {
+      "average_prompt_tokens": 250,
+      "average_completion_tokens": 44,
+      "average_bm25_savings_pct": 75.0
+    }
+  },
+  "failure_mode_analysis": [
+    {
+      "question": "Does the lease permit withholding rent if the air conditioning fails for 48 hours?",
+      "document": "lease_v1.txt",
+      "type": "implicit_statutory_remedy_absence",
+      "is_supported": false,
+      "refusal_reason": "The document does not provide enough evidence to answer this question.",
+      "answer_snippet": "I couldn't find information in this document that answers that question."
+    },
+    {
+      "question": "If the landlord orally promised a free parking spot, is it enforceable under this agreement?",
+      "document": "lease_v1.txt",
+      "type": "integration_clause_override",
+      "is_supported": false,
+      "refusal_reason": "The document does not provide enough evidence to answer this question.",
+      "answer_snippet": "I couldn't find information in this document that answers that question."
+    },
+    {
+      "question": "What is the annual interest penalty if severance is paid 3 days late?",
+      "document": "employment_agreement.docx",
+      "type": "near_boundary_unspecified_clause",
+      "is_supported": false,
+      "refusal_reason": "The document does not provide enough evidence to answer this question.",
+      "answer_snippet": "I couldn't find information in this document that answers that question."
+    },
+    {
+      "question": "Does the agreement cover intellectual property created prior to the effective date?",
+      "document": "master_service_agreement.txt",
+      "type": "temporal_scope_boundary",
+      "is_supported": false,
+      "refusal_reason": "The document does not provide enough evidence to answer this question.",
+      "answer_snippet": "I couldn't find information in this document that answers that question."
+    }
+  ]
 }
