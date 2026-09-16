@@ -223,3 +223,24 @@ class BenchmarkResult(BaseModel):
     comparison_accuracy: float
     extraction_accuracy: float
     timestamp: str
+
+
+class DeadlineEvent(BaseModel):
+    event_id: str
+    title: str
+    category: str
+    date_description: str
+    suggested_date: Optional[str] = None
+    source_clause: Optional[str] = None
+    action_required: str
+    evidence: Optional[Evidence] = None
+
+
+class DocumentDeadlinesResponse(BaseModel):
+    document_id: str
+    filename: str
+    deadlines: List[DeadlineEvent]
+    ics_download_url: str
+    is_demo: bool = False
+    is_cached: bool = False
+

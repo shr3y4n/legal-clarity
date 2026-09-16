@@ -1,0 +1,67 @@
+{
+  "Document Understanding (Fast Tier)": {
+    "model": "gemini-flash-lite-latest",
+    "latency_stats": {
+      "p50": 1299.44,
+      "p95": 1573.12,
+      "min": 1124.3,
+      "max": 1573.12
+    },
+    "avg_prompt_tokens": 212,
+    "avg_completion_tokens": 145,
+    "avg_total_tokens": 357,
+    "samples_count": 5
+  },
+  "Clause Risk Review (Reasoning Tier)": {
+    "model": "gemini-flash-latest",
+    "latency_stats": {
+      "p50": 1810.32,
+      "p95": 1934.0,
+      "min": 1250.87,
+      "max": 1934.0
+    },
+    "avg_prompt_tokens": 221,
+    "avg_completion_tokens": 388,
+    "avg_total_tokens": 609,
+    "samples_count": 5
+  },
+  "Grounded Q&A (Reasoning Tier)": {
+    "model": "gemini-flash-latest",
+    "latency_stats": {
+      "p50": 1128.19,
+      "p95": 6096.01,
+      "min": 859.94,
+      "max": 6096.01
+    },
+    "avg_prompt_tokens": 221,
+    "avg_completion_tokens": 22,
+    "avg_total_tokens": 243,
+    "samples_count": 5
+  },
+  "Redline Comparison (Reasoning Tier)": {
+    "model": "gemini-flash-latest",
+    "latency_stats": {
+      "p50": 2129.53,
+      "p95": 2305.73,
+      "min": 1926.5,
+      "max": 2305.73
+    },
+    "avg_prompt_tokens": 439,
+    "avg_completion_tokens": 514,
+    "avg_total_tokens": 953,
+    "samples_count": 5
+  },
+  "Pre-Signing Checklist (Fast Tier)": {
+    "model": "gemini-flash-lite-latest",
+    "latency_stats": {
+      "p50": 1860.09,
+      "p95": 2303.95,
+      "min": 1619.31,
+      "max": 2303.95
+    },
+    "avg_prompt_tokens": 214,
+    "avg_completion_tokens": 368,
+    "avg_total_tokens": 582,
+    "samples_count": 5
+  }
+}

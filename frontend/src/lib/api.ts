@@ -1,8 +1,10 @@
 import {
   Answer,
   Comparison,
+  DeadlineEvent,
   Document,
   DocumentChecklist,
+  DocumentDeadlinesResponse,
   DocumentMetadata,
   DocumentReviewResponse,
   DocumentUnderstanding,
@@ -17,6 +19,8 @@ import {
   clientReview,
   clientUnderstand,
   deleteClientDocument,
+  downloadCalendarIcsFile,
+  extractClientDeadlines,
   getClientDocument,
   getClientDocuments,
   initPreloadedDocuments,
@@ -276,3 +280,53 @@ export async function getLawyerPrep(documentId: string): Promise<LawyerPrepRespo
   if (!doc) throw new ApiError('Document not found.', 404);
   return clientLawyerPrep(doc);
 }
+
+export async function getDeadlines(documentId: string): Promise<DocumentDeadlinesResponse> {
+  if (isBackendAvailable !== false) {
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/deadlines`);
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback
+    }
+  }
+
+  const doc = getClientDocument(documentId);
+  if (!doc) throw new ApiError('Document not found.', 404);
+  const deadlines = extractClientDeadlines(doc);
+  return {
+    document_id: documentId,
+    filename: doc.metadata.filename,
+    deadlines,
+    ics_download_url: `/api/documents/${documentId}/calendar.ics`,
+    is_demo: true,
+    is_cached: false,
+  };
+}
+
+export async function exportCalendarIcs(documentId: string): Promise<void> {
+  if (isBackendAvailable !== false) {
+    try {
+      const res = await fetch(`${BASE_URL}/documents/${documentId}/calendar.ics`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `deadlines_${documentId}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+      }
+    } catch {
+      // Fallback to client generator
+    }
+  }
+
+  const doc = getClientDocument(documentId);
+  if (!doc) throw new ApiError('Document not found.', 404);
+  downloadCalendarIcsFile(doc);
+}
+

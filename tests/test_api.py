@@ -90,7 +90,22 @@ async def test_full_document_api_lifecycle():
         assert res_prep.status_code == 200
         assert len(res_prep.json()["questions"]) >= 1
 
-        # 9. Delete document
+        # 9. Deadlines Timeline
+        res_dl = await client.get(f"/api/documents/{doc_id}/deadlines")
+        assert res_dl.status_code == 200
+        dl_data = res_dl.json()
+        assert len(dl_data["deadlines"]) >= 1
+        assert "Notice" in dl_data["deadlines"][0]["category"]
+
+        # 10. Calendar (.ics) Export
+        res_ics = await client.get(f"/api/documents/{doc_id}/calendar.ics")
+        assert res_ics.status_code == 200
+        assert "text/calendar" in res_ics.headers.get("content-type", "")
+        assert "BEGIN:VCALENDAR" in res_ics.text
+        assert "END:VCALENDAR" in res_ics.text
+        assert "BEGIN:VEVENT" in res_ics.text
+
+        # 11. Delete document
         res_del = await client.delete(f"/api/documents/{doc_id}")
         assert res_del.status_code == 200
 

@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import HTTPException, status
 
 from app.models.schemas import Comparison
@@ -12,6 +13,7 @@ async def compare_documents_service(doc_a_id: str, doc_b_id: str) -> Comparison:
     Performs semantic and material comparison between two document revisions.
     Differentiates material risk shifts from non-material stylistic formatting.
     Caches comparison outcomes keyed on the joint hash of both documents.
+    Executes evidence verification across document revisions concurrently with asyncio.gather.
     """
     doc_a = document_store.get(doc_a_id)
     if not doc_a:
@@ -32,19 +34,30 @@ async def compare_documents_service(doc_a_id: str, doc_b_id: str) -> Comparison:
     if cached:
         return cached.model_copy(update={"is_cached": True})
 
-
     provider = get_provider()
     comp = await provider.compare(doc_a, doc_b)
 
-    # Verify evidence on changes
-    verified_changes = []
-    for chg in comp.changes:
-        v_old = verify_evidence(chg.old_evidence, doc_a) if chg.old_evidence else None
-        v_new = verify_evidence(chg.new_evidence, doc_b) if chg.new_evidence else None
-        verified_changes.append(
-            chg.model_copy(update={"old_evidence": v_old, "new_evidence": v_new})
+    # Parallelize evidence verification for both old and new clauses across all changes
+    async def verify_change(chg):
+        loop = asyncio.get_running_loop()
+        v_old = (
+            await loop.run_in_executor(None, verify_evidence, chg.old_evidence, doc_a)
+            if chg.old_evidence
+            else None
         )
+        v_new = (
+            await loop.run_in_executor(None, verify_evidence, chg.new_evidence, doc_b)
+            if chg.new_evidence
+            else None
+        )
+        return chg.model_copy(update={"old_evidence": v_old, "new_evidence": v_new})
 
-    updated_comp = comp.model_copy(update={"changes": verified_changes})
+    if comp.changes:
+        verified_changes = await asyncio.gather(*(verify_change(chg) for chg in comp.changes))
+    else:
+        verified_changes = []
+
+    updated_comp = comp.model_copy(update={"changes": list(verified_changes)})
     analysis_cache.set(cache_key, "compare", updated_comp)
     return updated_comp
+

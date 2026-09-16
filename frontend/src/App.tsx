@@ -169,6 +169,7 @@ export const App: React.FC = () => {
             {activeTab === 'understand' && (
               <UnderstandPanel
                 understanding={understanding}
+                document={currentDocument}
                 isLoading={isLoadingAnalysis}
                 onSelectEvidence={handleSelectEvidence}
               />

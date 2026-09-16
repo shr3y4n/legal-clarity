@@ -1,3 +1,4 @@
+import re
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile, status
@@ -10,6 +11,7 @@ from app.models.schemas import (
     Comparison,
     Document,
     DocumentChecklist,
+    DocumentDeadlinesResponse,
     DocumentMetadata,
     DocumentReviewResponse,
     DocumentUnderstanding,
@@ -17,8 +19,10 @@ from app.models.schemas import (
     LawyerPrepResponse,
     QuestionRequest,
 )
+from fastapi.responses import Response
 from app.services.analysis.ask import ask_document_question
 from app.services.caching.cache import analysis_cache
+from app.services.analysis.calendar import get_calendar_ics_service, get_deadlines_service
 from app.services.analysis.checklist import get_document_checklist
 from app.services.analysis.compare import compare_documents_service
 from app.services.analysis.lawyer_prep import get_lawyer_prep_questions
@@ -222,5 +226,32 @@ async def get_evidence_context(document_id: str, evidence_id: str):
         source_text="Retrieved contextual anchor.",
         verified=True,
         verification_score=1.0
+    )
+
+
+@router.get("/documents/{document_id}/deadlines", response_model=DocumentDeadlinesResponse, tags=["Analysis"])
+async def document_deadlines_endpoint(document_id: str):
+    """
+    Extracts key contractual deadlines, notice windows, and milestone obligations.
+    """
+    return await get_deadlines_service(document_id)
+
+
+@router.get("/documents/{document_id}/calendar.ics", tags=["Analysis"])
+async def export_calendar_ics_endpoint(document_id: str):
+    """
+    Generates and exports an RFC 5545 compliant .ics calendar file containing
+    all extracted contractual deadlines for 1-click import into Google, Apple, or Outlook Calendar.
+    """
+    ics_data = await get_calendar_ics_service(document_id)
+    doc = document_store.get(document_id)
+    raw_name = doc.metadata.filename if doc else "contract"
+    safe_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', raw_name)
+    return Response(
+        content=ics_data,
+        media_type="text/calendar",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}_deadlines.ics"'
+        }
     )
 

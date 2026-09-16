@@ -1,18 +1,90 @@
-import React from 'react';
-import { Calendar, Clock, FileText, Info, ShieldCheck, Users } from 'lucide-react';
-import { Claim, DocumentUnderstanding, Evidence } from '../../types/document';
+import React, { useMemo } from 'react';
+import {
+  Calendar,
+  Clock,
+  Download,
+  Info,
+  ShieldCheck,
+  Users,
+  AlertCircle,
+} from 'lucide-react';
+import { Claim, DeadlineEvent, Document, DocumentUnderstanding, Evidence } from '../../types/document';
+import { exportCalendarIcs } from '../../lib/api';
+import { extractClientDeadlines } from '../../lib/clientEngine';
 
 interface UnderstandPanelProps {
   understanding: DocumentUnderstanding | null;
+  document?: Document | null;
   isLoading: boolean;
   onSelectEvidence: (ev: Evidence) => void;
 }
 
 export const UnderstandPanel: React.FC<UnderstandPanelProps> = ({
   understanding,
+  document,
   isLoading,
   onSelectEvidence,
 }) => {
+  // Extract or synthesize structured contractual deadlines
+  const deadlines = useMemo<DeadlineEvent[]>(() => {
+    if (document) {
+      return extractClientDeadlines(document);
+    }
+    if (!understanding) return [];
+
+    const synthesized: DeadlineEvent[] = [];
+    if (understanding.notice_requirements && understanding.notice_requirements.length > 0) {
+      const claim = understanding.notice_requirements[0];
+      synthesized.push({
+        event_id: 'dl_notice_synth',
+        title: 'Advance Written Notice Requirement',
+        category: 'Notice Period',
+        date_description: claim.statement,
+        action_required: 'Deliver formal written notice before the contractual window expires.',
+        source_clause: claim.evidence?.[0]?.source_text,
+        evidence: claim.evidence?.[0],
+      });
+    }
+
+    if (understanding.payment_terms && understanding.payment_terms.length > 0) {
+      const claim = understanding.payment_terms[0];
+      synthesized.push({
+        event_id: 'dl_payment_synth',
+        title: 'Contractual Payment Milestone',
+        category: 'Payment Deadline',
+        date_description: claim.statement,
+        action_required: 'Verify invoice and disburse payments in accordance with agreed schedule.',
+        source_clause: claim.evidence?.[0]?.source_text,
+        evidence: claim.evidence?.[0],
+      });
+    }
+
+    if (understanding.termination_terms && understanding.termination_terms.length > 0) {
+      const claim = understanding.termination_terms[0];
+      synthesized.push({
+        event_id: 'dl_term_synth',
+        title: 'Termination / Cure Window',
+        category: 'Cure Period',
+        date_description: claim.statement,
+        action_required: 'Remedy potential default within the cure timeline or trigger termination proceedings.',
+        source_clause: claim.evidence?.[0]?.source_text,
+        evidence: claim.evidence?.[0],
+      });
+    }
+
+    return synthesized;
+  }, [document, understanding]);
+
+  const handleExportCalendar = async () => {
+    const docId = document?.metadata.document_id || understanding?.document_id;
+    if (!docId) return;
+    try {
+      await exportCalendarIcs(docId);
+    } catch {
+      // Fallback handled inside api.ts
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 text-center text-xs text-[#585854] space-y-3">
@@ -110,6 +182,67 @@ export const UnderstandPanel: React.FC<UnderstandPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Key Deadlines & Calendar Export Card (Original Hackathon Feature) */}
+      {deadlines.length > 0 && (
+        <div className="p-4 bg-[#fbfbfa] dark:bg-[#131b2c] border border-[#d8d8d2] dark:border-[#28354f] rounded-sm space-y-3 shadow-2xs">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-[#1d3557] dark:text-[#60a5fa]" />
+              <h4 className="text-xs font-semibold text-[#191919] dark:text-[#f3f4f6] uppercase tracking-wider m-0">
+                Action Timeline & Deadlines
+              </h4>
+            </div>
+            <button
+              onClick={handleExportCalendar}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#1d3557] dark:bg-[#2563eb] hover:bg-[#15253e] dark:hover:bg-[#1d4ed8] text-white font-mono-legal text-[11px] font-medium rounded-xs cursor-pointer transition-colors shadow-2xs"
+              title="Download RFC 5545 iCalendar file for Google Calendar, Apple Calendar, or Outlook"
+            >
+              <Download className="w-3 h-3" />
+              <span>Export to Calendar (.ics)</span>
+            </button>
+          </div>
+
+          <p className="text-[11px] text-[#585854] dark:text-[#9ca3af] m-0 leading-relaxed">
+            Legal Clarity auto-extracted notice periods, payment due dates, and cure windows into an actionable timeline. Export them directly to your calendar to guarantee you never miss a contractual deadline.
+          </p>
+
+          <div className="space-y-2 pt-1">
+            {deadlines.map((dl) => (
+              <div
+                key={dl.event_id}
+                className="p-2.5 bg-white dark:bg-[#182234] border border-[#e5e5e0] dark:border-[#2a3854] rounded-xs space-y-1"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-semibold text-[#191919] dark:text-[#f3f4f6]">
+                    {dl.title}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-2xs text-[9px] font-mono-legal uppercase font-medium bg-[#eef2f6] dark:bg-[#1e293b] text-[#1e40af] dark:text-[#93c5fd] border border-[#dbeafe] dark:border-[#1e3a8a]">
+                    {dl.category}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#585854] dark:text-[#cbd5e1] m-0">
+                  <strong className="text-[#191919] dark:text-white">Timing:</strong> {dl.date_description}
+                </p>
+                <p className="text-[11px] text-[#6b7280] dark:text-[#94a3b8] m-0 leading-relaxed">
+                  {dl.action_required}
+                </p>
+                {dl.evidence && (
+                  <div className="pt-1">
+                    <button
+                      onClick={() => onSelectEvidence(dl.evidence!)}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#f3f3f0] dark:bg-[#0e1726] hover:bg-[#e5e5e0] text-[#585854] dark:text-[#94a3b8] font-mono-legal text-[10px] rounded-xs border border-[#e5e5e0] dark:border-[#223049] cursor-pointer"
+                    >
+                      <ShieldCheck className="w-2.5 h-2.5 text-[#166534] dark:text-[#4ade80]" />
+                      <span>Verify Clause in Document Canvas</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Plain Language Summary */}
       <div className="space-y-1.5">

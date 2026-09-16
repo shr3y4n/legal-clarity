@@ -148,4 +148,25 @@ export interface LawyerPrepResponse {
   is_demo: boolean;
 }
 
+export interface DeadlineEvent {
+  event_id: string;
+  title: string;
+  category: string;
+  date_description: string;
+  action_required: string;
+  source_clause?: string | null;
+  suggested_date?: string | null;
+  evidence?: Evidence | null;
+}
+
+export interface DocumentDeadlinesResponse {
+  document_id: string;
+  filename: string;
+  deadlines: DeadlineEvent[];
+  ics_download_url: string;
+  is_demo: boolean;
+  is_cached: boolean;
+}
+
 export type ActiveTab = 'understand' | 'review' | 'ask' | 'compare' | 'checklist' | 'lawyer-prep';
+
