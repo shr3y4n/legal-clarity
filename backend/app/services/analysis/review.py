@@ -7,6 +7,10 @@ from app.services.storage.document_store import document_store
 
 
 async def get_document_review(document_id: str) -> DocumentReviewResponse:
+    """
+    Analyzes document risks, classifying clauses into Must Review, Worth Reviewing, and Standard.
+    Uses AnalysisCache for instant repeat requests.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -16,9 +20,10 @@ async def get_document_review(document_id: str) -> DocumentReviewResponse:
 
     cached = analysis_cache.get(doc.metadata.sha256_hash, "review")
     if cached:
-        return cached
+        return cached.model_copy(update={"is_cached": True})
 
     provider = get_provider()
     result = await provider.review(doc)
     analysis_cache.set(doc.metadata.sha256_hash, "review", result)
     return result
+

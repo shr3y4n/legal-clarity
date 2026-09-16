@@ -8,6 +8,10 @@ from app.services.storage.document_store import document_store
 
 
 async def get_document_checklist(document_id: str) -> DocumentChecklist:
+    """
+    Generates actionable pre-signing compliance and verification checklists.
+    Grounds checklist items against verified source evidence, caching results by document hash.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -17,7 +21,8 @@ async def get_document_checklist(document_id: str) -> DocumentChecklist:
 
     cached = analysis_cache.get(doc.metadata.sha256_hash, "checklist")
     if cached:
-        return cached
+        return cached.model_copy(update={"is_cached": True})
+
 
     provider = get_provider()
     chk = await provider.checklist(doc)

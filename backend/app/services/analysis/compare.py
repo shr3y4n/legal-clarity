@@ -8,6 +8,11 @@ from app.services.storage.document_store import document_store
 
 
 async def compare_documents_service(doc_a_id: str, doc_b_id: str) -> Comparison:
+    """
+    Performs semantic and material comparison between two document revisions.
+    Differentiates material risk shifts from non-material stylistic formatting.
+    Caches comparison outcomes keyed on the joint hash of both documents.
+    """
     doc_a = document_store.get(doc_a_id)
     if not doc_a:
         raise HTTPException(
@@ -25,7 +30,8 @@ async def compare_documents_service(doc_a_id: str, doc_b_id: str) -> Comparison:
     cache_key = f"{doc_a.metadata.sha256_hash}_{doc_b.metadata.sha256_hash}"
     cached = analysis_cache.get(cache_key, "compare")
     if cached:
-        return cached
+        return cached.model_copy(update={"is_cached": True})
+
 
     provider = get_provider()
     comp = await provider.compare(doc_a, doc_b)

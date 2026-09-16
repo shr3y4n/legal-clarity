@@ -8,6 +8,10 @@ from app.services.storage.document_store import document_store
 
 
 async def get_lawyer_prep_questions(document_id: str) -> LawyerPrepResponse:
+    """
+    Synthesizes critical negotiation points into targeted questions for a licensed attorney.
+    Ensures clear disclaimer boundaries and caches outputs against document hash.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -17,7 +21,8 @@ async def get_lawyer_prep_questions(document_id: str) -> LawyerPrepResponse:
 
     cached = analysis_cache.get(doc.metadata.sha256_hash, "lawyer_prep")
     if cached:
-        return cached
+        return cached.model_copy(update={"is_cached": True})
+
 
     provider = get_provider()
     prep = await provider.lawyer_prep(doc)

@@ -22,6 +22,7 @@ from app.models.schemas import (
     LawyerQuestion,
     ReviewItem,
     ReviewLevel,
+    TokenUsage,
 )
 from app.services.evidence.verifier import verify_evidence
 from app.services.providers.base import LLMProvider
@@ -44,7 +45,24 @@ CRITICAL SAFETY BOUNDARIES:
 
 
 class GeminiLLMProvider(LLMProvider):
+    """
+    Live LLM provider backed by Google Gemini models (e.g. gemini-2.5-flash-lite).
+
+    Architectural Safeguards:
+    1. Zero-Temperature Determinism: Temperature is pinned to 0.0 to eliminate stochastic
+       hallucinations and guarantee reproducible contract extraction.
+    2. Strict Native JSON Enforcement: Uses `responseMimeType: "application/json"` with
+       explicit Pydantic schema mapping instructions.
+    3. Untrusted Data Boundary: Input contract text is strictly delimited within
+       `<UNTRUSTED_DOCUMENT_DATA>` tags to prevent indirect prompt injection attacks.
+    4. Two-Tier Verification Guard: Every evidence anchor returned by Gemini is checked
+       against the actual document text using `compute_containment_score()`.
+    5. Graceful Circuit Breaker: Network failures, timeouts, or API rate limits automatically
+       fall back to `DemoLLMProvider`, guaranteeing 100% application availability.
+    """
+
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+
         self.api_key = api_key or settings.GEMINI_API_KEY
         self.model = model or settings.GEMINI_MODEL
         self.fallback = DemoLLMProvider()

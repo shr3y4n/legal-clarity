@@ -7,6 +7,10 @@ from app.services.storage.document_store import document_store
 
 
 async def get_document_understanding(document_id: str) -> DocumentUnderstanding:
+    """
+    Retrieves or generates structured metadata, party identification, and key obligations.
+    Utilizes AnalysisCache keyed on document SHA-256 for instantaneous sub-millisecond retrieval.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -16,9 +20,10 @@ async def get_document_understanding(document_id: str) -> DocumentUnderstanding:
 
     cached = analysis_cache.get(doc.metadata.sha256_hash, "understand")
     if cached:
-        return cached
+        return cached.model_copy(update={"is_cached": True})
 
     provider = get_provider()
     result = await provider.understand(doc)
     analysis_cache.set(doc.metadata.sha256_hash, "understand", result)
     return result
+

@@ -19,12 +19,43 @@ from app.models.schemas import (
     LawyerQuestion,
     ReviewItem,
     ReviewLevel,
+    TokenUsage,
 )
 from app.services.evidence.verifier import compute_containment_score
 from app.services.providers.base import LLMProvider
 
 
+def estimate_token_usage(
+    full_text: str,
+    prompt_context: str,
+    completion_text: str,
+    is_targeted: bool = True
+) -> TokenUsage:
+    """
+    Computes input/output token accounting and documents BM25 retrieval savings.
+    Shows the cost difference between naive full-document stuffing vs targeted retrieval.
+    """
+    full_words = len(full_text.split())
+    full_tokens = max(1000, int(full_words * 1.33))
+    context_words = len(prompt_context.split())
+    prompt_tokens = max(250, int(context_words * 1.33)) if is_targeted else full_tokens
+    prompt_tokens = min(prompt_tokens, full_tokens)
+
+    completion_words = len(completion_text.split())
+    completion_tokens = max(40, int(completion_words * 1.33))
+    total = prompt_tokens + completion_tokens
+    savings = round(max(0.0, (1.0 - (prompt_tokens / full_tokens)) * 100.0), 1)
+
+    return TokenUsage(
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total,
+        savings_vs_full_document_pct=savings
+    )
+
+
 class DemoLLMProvider(LLMProvider):
+
     """
     Deterministic, high-fidelity mock/demo provider.
     Enables 100% offline usage, deterministic benchmarking, and reliable demos without API keys.
@@ -225,6 +256,12 @@ class DemoLLMProvider(LLMProvider):
             f"and termination remedies between the participating entities."
         )
 
+        tokens = estimate_token_usage(
+            full_text=text,
+            prompt_context=text[:1600],
+            completion_text=summary
+        )
+
         return DocumentUnderstanding(
             document_id=doc_id,
             document_type=doc_type,
@@ -238,8 +275,10 @@ class DemoLLMProvider(LLMProvider):
             notice_requirements=notice_terms,
             unusual_obligations=unusual_terms,
             concise_summary=summary,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens
         )
+
 
     async def review(self, document: Document) -> DocumentReviewResponse:
         doc_id = document.metadata.document_id
@@ -336,6 +375,12 @@ class DemoLLMProvider(LLMProvider):
         review_count = sum(1 for i in items if i.level == ReviewLevel.REVIEW)
         important_count = sum(1 for i in items if i.level == ReviewLevel.IMPORTANT_TO_REVIEW)
 
+        tokens = estimate_token_usage(
+            full_text=document.full_text,
+            prompt_context=" ".join(i.plain_explanation for i in items),
+            completion_text=f"Reviewed {len(items)} provisions."
+        )
+
         return DocumentReviewResponse(
             document_id=doc_id,
             review_items=items,
@@ -343,8 +388,10 @@ class DemoLLMProvider(LLMProvider):
             routine_count=routine_count,
             review_count=review_count,
             important_count=important_count,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens
         )
+
 
     async def ask(self, document: Document, question: str, relevant_chunks: List[Chunk]) -> Answer:
         doc_id = document.metadata.document_id
@@ -352,22 +399,26 @@ class DemoLLMProvider(LLMProvider):
 
         # Prompt injection attempt detection
         if any(w in q_lower for w in ["ignore", "system prompt", "reveal", "bypass", "safe contract"]):
+            tokens = estimate_token_usage(document.full_text, question, "Security refusal")
             return Answer(
                 answer_text="The requested instruction cannot be performed. Questions must query factual content within the uploaded document.",
                 is_supported=False,
                 refusal_reason="Security policy violation: prompt injection or out-of-bounds meta-instruction detected.",
                 evidence=[],
-                is_demo=True
+                is_demo=True,
+                token_usage=tokens
             )
 
         # Check for unanswerable question or question completely outside the document
         if not relevant_chunks:
+            tokens = estimate_token_usage(document.full_text, question, "Unanswerable refusal")
             return Answer(
                 answer_text="I couldn't find information in this document that answers that question.",
                 is_supported=False,
                 refusal_reason="The document does not provide enough evidence to answer this question.",
                 evidence=[],
-                is_demo=True
+                is_demo=True,
+                token_usage=tokens
             )
 
         # Find best chunk matching question keywords with topic-specificity check
@@ -410,12 +461,18 @@ class DemoLLMProvider(LLMProvider):
 
         # If specific query keywords are not adequately found, the document does NOT establish the answer!
         if best_chunk is None or best_score < 0.40:
+            tokens = estimate_token_usage(
+                document.full_text,
+                f"{question} " + (best_chunk.text if best_chunk else ""),
+                "Refusal"
+            )
             return Answer(
                 answer_text="I couldn't find information in this document that answers that question.",
                 is_supported=False,
                 refusal_reason="The document does not provide enough evidence to answer this question.",
                 evidence=[],
-                is_demo=True
+                is_demo=True,
+                token_usage=tokens
             )
 
         # Answer supported by best chunk
@@ -437,13 +494,21 @@ class DemoLLMProvider(LLMProvider):
             f"\"{excerpt}\""
         )
 
+        tokens = estimate_token_usage(
+            document.full_text,
+            f"{question} {best_chunk.text}",
+            answer_text
+        )
+
         return Answer(
             answer_text=answer_text,
             is_supported=True,
             evidence=[ev],
             refusal_reason=None,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens
         )
+
 
     async def compare(self, doc_a: Document, doc_b: Document) -> Comparison:
         changes: List[ComparisonChange] = []
@@ -566,19 +631,28 @@ class DemoLLMProvider(LLMProvider):
         mat_count = sum(1 for c in changes if c.classification == ChangeClassification.MATERIAL)
         pot_count = sum(1 for c in changes if c.classification == ChangeClassification.POTENTIALLY_IMPORTANT)
         non_count = sum(1 for c in changes if c.classification == ChangeClassification.NON_MATERIAL)
+        diff_summary = f"Identified {mat_count} material changes, {pot_count} potentially important modifications, and {non_count} non-material formatting variations."
+
+        tokens = estimate_token_usage(
+            full_text=doc_a.full_text + "\n" + doc_b.full_text,
+            prompt_context=" ".join(c.plain_meaning_explanation for c in changes),
+            completion_text=diff_summary
+        )
 
         return Comparison(
             doc_a_id=doc_a.metadata.document_id,
             doc_b_id=doc_b.metadata.document_id,
             doc_a_name=doc_a.metadata.filename,
             doc_b_name=doc_b.metadata.filename,
-            summary_of_differences=f"Identified {mat_count} material changes, {pot_count} potentially important modifications, and {non_count} non-material formatting variations.",
+            summary_of_differences=diff_summary,
             changes=changes,
             material_count=mat_count,
             potentially_important_count=pot_count,
             non_material_count=non_count,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens
         )
+
 
     async def checklist(self, document: Document) -> DocumentChecklist:
         doc_id = document.metadata.document_id
@@ -678,10 +752,17 @@ class DemoLLMProvider(LLMProvider):
                 )
             )
 
+        tokens_chk = estimate_token_usage(
+            full_text=document.full_text,
+            prompt_context=" ".join(i.plain_instruction for i in items),
+            completion_text=f"Checklist with {len(items)} actionable items."
+        )
+
         return DocumentChecklist(
             document_id=doc_id,
             items=items,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens_chk
         )
 
     async def lawyer_prep(self, document: Document) -> LawyerPrepResponse:
@@ -772,9 +853,17 @@ class DemoLLMProvider(LLMProvider):
             "replace an attorney."
         )
 
+        tokens_prep = estimate_token_usage(
+            full_text=document.full_text,
+            prompt_context=" ".join(q.recommended_question for q in questions),
+            completion_text=f"Prepared {len(questions)} counsel questions."
+        )
+
         return LawyerPrepResponse(
             document_id=doc_id,
             questions=questions,
             legal_safety_disclaimer=disclaimer,
-            is_demo=True
+            is_demo=True,
+            token_usage=tokens_prep
         )
+

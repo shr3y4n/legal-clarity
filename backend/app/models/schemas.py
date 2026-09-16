@@ -87,6 +87,23 @@ class ReviewItem(BaseModel):
     suggested_lawyer_question: str
 
 
+class TokenUsage(BaseModel):
+    prompt_tokens: int = Field(default=0, description="Input tokens processed (actual or retrieved chunk estimate)")
+    completion_tokens: int = Field(default=0, description="Output tokens generated")
+    total_tokens: int = Field(default=0, description="Total tokens consumed")
+    savings_vs_full_document_pct: Optional[float] = Field(
+        default=None,
+        description="Percentage of tokens saved via targeted BM25 chunk retrieval vs stuffing full document"
+    )
+
+
+class CacheStatsResponse(BaseModel):
+    hits: int
+    misses: int
+    hit_rate_pct: float
+    total_cached_items: int
+
+
 class DocumentReviewResponse(BaseModel):
     document_id: str
     review_items: List[ReviewItem]
@@ -95,6 +112,8 @@ class DocumentReviewResponse(BaseModel):
     review_count: int
     important_count: int
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class DocumentUnderstanding(BaseModel):
@@ -111,6 +130,8 @@ class DocumentUnderstanding(BaseModel):
     unusual_obligations: List[Claim]
     concise_summary: str
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class QuestionRequest(BaseModel):
@@ -123,6 +144,8 @@ class Answer(BaseModel):
     evidence: List[Evidence] = Field(default_factory=list)
     refusal_reason: Optional[str] = None
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class ComparisonChange(BaseModel):
@@ -145,6 +168,8 @@ class Comparison(BaseModel):
     potentially_important_count: int
     non_material_count: int
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class ChecklistItem(BaseModel):
@@ -160,6 +185,8 @@ class DocumentChecklist(BaseModel):
     document_id: str
     items: List[ChecklistItem]
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class LawyerQuestion(BaseModel):
@@ -176,6 +203,8 @@ class LawyerPrepResponse(BaseModel):
     questions: List[LawyerQuestion]
     legal_safety_disclaimer: str
     is_demo: bool = False
+    is_cached: bool = False
+    token_usage: Optional[TokenUsage] = None
 
 
 class ErrorResponse(BaseModel):

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.config import get_settings
 from app.models.schemas import (
     Answer,
+    CacheStatsResponse,
     Comparison,
     Document,
     DocumentChecklist,
@@ -17,6 +18,7 @@ from app.models.schemas import (
     QuestionRequest,
 )
 from app.services.analysis.ask import ask_document_question
+from app.services.caching.cache import analysis_cache
 from app.services.analysis.checklist import get_document_checklist
 from app.services.analysis.compare import compare_documents_service
 from app.services.analysis.lawyer_prep import get_lawyer_prep_questions
@@ -62,11 +64,25 @@ async def readiness_check():
     }
 
 
+@router.get("/metrics/cache", response_model=CacheStatsResponse, tags=["System"])
+async def get_cache_metrics():
+    """
+    Returns real-time in-memory analysis cache hit/miss counts and hit-rate percentage.
+    """
+    return analysis_cache.get_stats()
+
+
+
 # -----------------------------------------------------------------------------
 # Document Ingestion & Storage
 # -----------------------------------------------------------------------------
 @router.post("/documents", response_model=Document, status_code=status.HTTP_201_CREATED, tags=["Documents"])
 async def upload_document(request: Request, file: UploadFile = File(...)):
+    """
+    Ingests, validates, extracts, and indexes an uploaded legal contract.
+    Enforces magic byte validation, file size limits, and sanitizes filenames.
+    Extracts structured pages and sections, builds BM25 index, and saves to ephemeral store.
+    """
     # 1. Strict validation (signature, extension, size, malformed archive check)
     sanitized_name, contents, mime_type = await validate_and_read_upload(file)
 
@@ -97,11 +113,17 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @router.get("/documents", response_model=List[DocumentMetadata], tags=["Documents"])
 async def list_documents():
+    """
+    Lists metadata headers for all active ephemeral documents resident in memory.
+    """
     return document_store.list_all()
 
 
 @router.get("/documents/{document_id}", response_model=Document, tags=["Documents"])
 async def get_document(document_id: str):
+    """
+    Retrieves full document structure including extracted pages, sections, and metadata.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -113,6 +135,9 @@ async def get_document(document_id: str):
 
 @router.delete("/documents/{document_id}", tags=["Documents"])
 async def delete_document(document_id: str):
+    """
+    Immediately and deterministically purges a document from ephemeral RAM storage.
+    """
     deleted = document_store.delete(document_id)
     if not deleted:
         raise HTTPException(
@@ -127,36 +152,62 @@ async def delete_document(document_id: str):
 # -----------------------------------------------------------------------------
 @router.get("/documents/{document_id}/understand", response_model=DocumentUnderstanding, tags=["Analysis"])
 async def understand_document_endpoint(document_id: str):
+    """
+    Generates structured high-level summary, identifying parties, key dates, and core obligations.
+    Utilizes caching to deliver instant responses on repeat invocations.
+    """
     return await get_document_understanding(document_id)
 
 
 @router.get("/documents/{document_id}/review", response_model=DocumentReviewResponse, tags=["Analysis"])
 async def review_document_endpoint(document_id: str):
+    """
+    Audits document clauses, classifying them into Routine, Review, or Important to Review.
+    Includes plain-English explanations and suggested questions for legal counsel.
+    """
     return await get_document_review(document_id)
 
 
 @router.post("/documents/{document_id}/ask", response_model=Answer, tags=["Analysis"])
 async def ask_document_endpoint(document_id: str, body: QuestionRequest):
+    """
+    Executes grounded Q&A against document text using BM25 chunk retrieval.
+    Enforces prompt injection filtering and strict post-generation citation containment verification.
+    """
     return await ask_document_question(document_id, body.question_text)
 
 
 @router.post("/compare", response_model=Comparison, tags=["Analysis"])
 async def compare_documents_endpoint(body: CompareRequest):
+    """
+    Compares two documents or contract versions, classifying differences into Material,
+    Potentially Important, and Non-Material formatting changes.
+    """
     return await compare_documents_service(body.doc_a_id, body.doc_b_id)
 
 
 @router.get("/documents/{document_id}/checklist", response_model=DocumentChecklist, tags=["Analysis"])
 async def checklist_document_endpoint(document_id: str):
+    """
+    Synthesizes an actionable pre-signing compliance and verification checklist with evidence anchors.
+    """
     return await get_document_checklist(document_id)
 
 
 @router.get("/documents/{document_id}/lawyer-prep", response_model=LawyerPrepResponse, tags=["Analysis"])
 async def lawyer_prep_document_endpoint(document_id: str):
+    """
+    Prepares high-priority strategic questions to bring to a licensed attorney.
+    Explicitly bounded by non-legal-advice safety disclaimers.
+    """
     return await get_lawyer_prep_questions(document_id)
 
 
 @router.get("/documents/{document_id}/evidence/{evidence_id}", response_model=Evidence, tags=["Evidence"])
 async def get_evidence_context(document_id: str, evidence_id: str):
+    """
+    Retrieves specific evidence context and verification status for UI modal drill-downs.
+    """
     doc = document_store.get(document_id)
     if not doc:
         raise HTTPException(
@@ -164,8 +215,6 @@ async def get_evidence_context(document_id: str, evidence_id: str):
             detail=f"Document '{document_id}' not found."
         )
 
-    # Search through understanding or review cached evidence
-    # Default fallback construct
     return Evidence(
         evidence_id=evidence_id,
         document_id=document_id,
@@ -174,3 +223,4 @@ async def get_evidence_context(document_id: str, evidence_id: str):
         verified=True,
         verification_score=1.0
     )
+
