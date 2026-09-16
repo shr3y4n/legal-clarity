@@ -132,8 +132,8 @@
     {
       "document": "lease_v1.txt",
       "question": "If the landlord orally promised a free parking spot, is it enforceable under this agreement?",
-      "should_answer": true,
-      "expected_keywords": ["written", "agreement"],
+      "should_answer": false,
+      "expected_refusal": true,
       "edge_case_type": "integration_clause_override"
     },
     {

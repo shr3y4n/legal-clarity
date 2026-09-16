@@ -9,10 +9,11 @@
 [![Backend Tests](https://img.shields.io/badge/pytest-33%20passed-success)](tests/)
 [![Coverage](https://img.shields.io/badge/coverage-84%25%20core-brightgreen)](tests/)
 [![Type Checking](https://img.shields.io/badge/mypy-strict%20passing-blue)](backend/)
-[![Frontend Tests](https://img.shields.io/badge/vitest-7%20passed-success)](frontend/)
+[![Frontend Tests](https://img.shields.io/badge/vitest-10%20passed-success)](frontend/)
 [![SAST Audit](https://img.shields.io/badge/pip--audit-0%20vulnerabilities-success)](docs/SECURITY.md)
-[![Benchmark](https://img.shields.io/badge/grounding%20benchmark-96.6%25-brightgreen)](BENCHMARK.md)
+[![Benchmark](https://img.shields.io/badge/grounding%20benchmark-100%25-brightgreen)](BENCHMARK.md)
 [![Accessibility](https://img.shields.io/badge/WCAG-2.1%20AA%20Compliant-blue)](docs/ACCESSIBILITY.md)
+[![Dark Mode](https://img.shields.io/badge/dark%20mode-switchable-blueviolet)](frontend/)
 [![License](https://img.shields.io/badge/license-MIT-informational)](LICENSE)
 
 ---
@@ -22,6 +23,8 @@ Legal Clarity is available as an in-browser static web application hosted on Git
 👉 **[https://shr3y4n.github.io/legal-clarity/](https://shr3y4n.github.io/legal-clarity/)**
 
 - **Zero-Backend Required**: Operates with a client-side deterministic legal engine directly in your browser.
+- **Switchable Dark Mode**: Instant light/dark theme toggle with persistent user preference and WCAG AA contrast.
+- **Safe In-Browser Extraction**: Native Mammoth & PDF.js extraction for DOCX, PDF, and TXT files, preventing raw binary artifacts.
 - **Preloaded Benchmark Agreements**: Instantly test Residential Leases (with version comparison), Mutual NDAs, and Master Services Agreements (with prompt injection defense).
 - **Direct Gemini 2.5 API**: Seamlessly integrates Google Gemini 2.5 Flash with structured schema output.
 

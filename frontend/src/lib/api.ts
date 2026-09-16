@@ -23,6 +23,7 @@ import {
   parseDocumentFromText,
   DEFAULT_GEMINI_API_KEY,
 } from './clientEngine';
+import { parseUploadedFile } from './fileParser';
 
 const BASE_URL = '/api';
 let isBackendAvailable: boolean | null = null;
@@ -129,9 +130,8 @@ export async function uploadDocument(file: File): Promise<Document> {
     }
   }
 
-  // Client-Side In-Browser Extraction
-  const text = await file.text();
-  return parseDocumentFromText(file.name, text);
+  // Client-Side In-Browser Extraction (handles PDF, DOCX, TXT, MD)
+  return parseUploadedFile(file);
 }
 
 export async function getDocument(documentId: string): Promise<Document> {

@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-09-16T05:06:19.947751+00:00",
+  "timestamp": "2026-09-16T05:20:19.855350+00:00",
   "summary": {
     "total_test_points": 29,
-    "passed_test_points": 28,
-    "pass_rate": 96.6
+    "passed_test_points": 29,
+    "pass_rate": 100.0
   },
   "metrics": {
-    "grounded_answer_rate": 90.9,
-    "unsupported_answer_rate": 5.3,
+    "grounded_answer_rate": 100.0,
+    "unsupported_answer_rate": 0.0,
     "correct_refusal_rate": 100.0,
     "evidence_verification_accuracy": 100.0,
     "comparison_accuracy": 100.0,

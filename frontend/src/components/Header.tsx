@@ -9,9 +9,12 @@ import {
   ShieldCheck,
   Upload,
   Settings,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { ActiveTab, DocumentMetadata } from '../types/document';
 import { SettingsModal } from './SettingsModal';
+import { getInitialTheme, toggleTheme, Theme } from '../lib/theme';
 
 interface HeaderProps {
   currentDocument: DocumentMetadata | null;
@@ -33,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefreshProvider,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: 'understand', label: 'Understand', icon: FileText },
@@ -125,6 +129,23 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
             <Settings className="w-3 h-3 text-[#2563eb]" />
             <span>Gemini 2.5 Active</span>
+          </button>
+
+          {/* Dark / Light Mode Switcher */}
+          <button
+            onClick={() => {
+              const next = toggleTheme(theme);
+              setTheme(next);
+            }}
+            className="flex items-center justify-center w-7 h-7 rounded-sm border border-[#e5e5e0] dark:border-[#1f293d] bg-white dark:bg-[#161f30] text-[#585854] dark:text-[#9ca3af] hover:text-[#191919] dark:hover:text-[#f3f4f6] cursor-pointer transition-colors shadow-2xs"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-3.5 h-3.5 text-[#fbbf24]" />
+            ) : (
+              <Moon className="w-3.5 h-3.5 text-[#585854]" />
+            )}
           </button>
 
           {/* Upload Button */}

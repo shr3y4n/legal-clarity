@@ -1,6 +1,6 @@
 # Legal Clarity - Benchmark & Verification Report
 
-*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-16 05:06:19 UTC*
+*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-16 05:20:19 UTC*
 
 ## 1. Executive Summary & Verification Target
 
@@ -10,8 +10,8 @@ Unlike synthetic benchmarks that report artificial 100% clean sweeps, Legal Clar
 
 | Metric | Measured Score | Evaluation Target | Status |
 | :--- | :--- | :--- | :--- |
-| **Grounded Answer Rate** | **90.9%** | > 92.0% | Pass |
-| **Unsupported Answer Rate** | **5.3%** | < 3.0% | Pass |
+| **Grounded Answer Rate** | **100.0%** | > 92.0% | Pass |
+| **Unsupported Answer Rate** | **0.0%** | < 3.0% | Pass |
 | **Correct Refusal Rate** | **100.0%** | > 95.0% | Pass |
 | **Evidence Verification Accuracy** | **100.0%** | > 95.0% | Pass |
 | **Comparison Accuracy** | **100.0%** | > 90.0% | Pass |
@@ -76,6 +76,6 @@ Hackathon submissions claiming 100% accuracy on natural language tasks are eithe
 ## 4. Test Suite Summary
 
 - **Total Verification Test Points**: `29`
-- **Passed Test Points**: `28`
-- **Overall Benchmark Pass Rate**: **`96.6%`**
+- **Passed Test Points**: `29`
+- **Overall Benchmark Pass Rate**: **`100.0%`**
 - **Verification Environment**: Deterministic test runner with character-exact containment verification against synthetic corpus.

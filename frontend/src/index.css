@@ -20,6 +20,25 @@
     --risk-routine-bg: #f0fdf4;
   }
 
+  .dark {
+    --bg-page: #0b0f17;
+    --bg-paper: #111827;
+    --bg-sidebar: #0e1420;
+    --border-subtle: #1f293d;
+    --border-strong: #374151;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --accent-navy: #3b82f6;
+    --accent-gold: #fbbf24;
+    --risk-important: #f87171;
+    --risk-important-bg: #450a0a;
+    --risk-review: #fbbf24;
+    --risk-review-bg: #451a03;
+    --risk-routine: #4ade80;
+    --risk-routine-bg: #052e16;
+  }
+
   body {
     background-color: var(--bg-page);
     color: var(--text-primary);
@@ -28,6 +47,7 @@
     padding: 0;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Document Typography */
@@ -61,6 +81,70 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a0;
 }
+
+/* Dark mode scrollbars and surface overrides */
+.dark ::-webkit-scrollbar-track {
+  background: #0b0f17;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #283347;
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3b4863;
+}
+
+.dark header,
+.dark .bg-white {
+  background-color: #111827 !important;
+  color: #f3f4f6 !important;
+}
+
+.dark .bg-\[\#f8f8f6\] {
+  background-color: #0b0f17 !important;
+}
+
+.dark .bg-\[\#f3f3f0\] {
+  background-color: #0e1420 !important;
+}
+
+.dark .bg-\[\#fafaf8\],
+.dark .bg-\[\#eaeae6\] {
+  background-color: #161f30 !important;
+}
+
+.dark .border-\[\#e5e5e0\] {
+  border-color: #1f293d !important;
+}
+
+.dark .border-\[\#c8c8c0\] {
+  border-color: #374151 !important;
+}
+
+.dark .text-\[\#191919\] {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-\[\#585854\] {
+  color: #9ca3af !important;
+}
+
+.dark .text-\[\#82827c\] {
+  color: #6b7280 !important;
+}
+
+.dark .text-\[\#2c3e50\] {
+  color: #e2e8f0 !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #161f30 !important;
+  color: #f3f4f6 !important;
+  border-color: #1f293d !important;
+}
+
 
 /* Print and redaction styles */
 @media print {

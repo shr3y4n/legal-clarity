@@ -75,4 +75,21 @@ describe('Header Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /upload/i }));
     expect(handleUpload).toHaveBeenCalledTimes(1);
   });
+
+  it('toggles dark mode when theme toggle button is clicked', () => {
+    render(
+      <Header
+        currentDocument={null}
+        activeTab="understand"
+        setActiveTab={vi.fn()}
+        onOpenUpload={vi.fn()}
+        isDemo={false}
+      />
+    );
+
+    const toggleBtn = screen.getByRole('button', { name: /switch to (dark|light) mode/i });
+    expect(toggleBtn).not.toBeNull();
+    fireEvent.click(toggleBtn);
+  });
 });
+

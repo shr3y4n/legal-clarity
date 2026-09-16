@@ -19,6 +19,7 @@ import {
   listDocuments,
   getDocument,
 } from './lib/api';
+import { applyTheme, getInitialTheme } from './lib/theme';
 import {
   ActiveTab,
   Document,
@@ -59,8 +60,9 @@ export const App: React.FC = () => {
       .catch(() => {});
   };
 
-  // Initialize readiness
+  // Initialize readiness & theme
   useEffect(() => {
+    applyTheme(getInitialTheme());
     loadProviderInfo();
 
     // Try to load any existing document in memory
