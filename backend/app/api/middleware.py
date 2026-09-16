@@ -25,12 +25,21 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     Applies security headers to every HTTP response.
     """
     async def dispatch(self, request: Request, call_next):
-        response: Response = await call_next(request)
+        response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        # X-XSS-Protection is intentionally omitted: it is deprecated by OWASP/W3C and
+        # superseded by Content-Security-Policy; legacy XSS filters introduced client vulnerabilities.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "connect-src 'self' https://generativelanguage.googleapis.com; "
+            "frame-ancestors 'none';"
+        )
         return response
 
 

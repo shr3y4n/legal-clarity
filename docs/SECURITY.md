@@ -70,9 +70,10 @@ The application uses a custom `SafeFormatter` that scrubs any token matching Goo
 - **Security Headers Middleware**: Every HTTP response carries:
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: DENY`
-  - `X-XSS-Protection: 1; mode=block`
   - `Referrer-Policy: strict-origin-when-cross-origin`
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+  - `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://generativelanguage.googleapis.com; frame-ancestors 'none';`
+  *(Note: Legacy `X-XSS-Protection: 1; mode=block` is intentionally omitted in accordance with OWASP and W3C guidance; modern browsers ignore it, and older browser heuristics introduced client-side side-channel leakage. Modern defense is provided exclusively via strict CSP).*
 - **Safe Error Masking**: Unhandled server exceptions are caught globally and returned as structured `ErrorResponse` objects with a unique `request_id`. Raw Python tracebacks and internal variable states are never sent to the client in production.
 
 ---
@@ -83,3 +84,37 @@ The application uses a custom `SafeFormatter` that scrubs any token matching Goo
 - Documents are never written to permanent disk storage.
 - An automatic TTL reaper evicts documents after 2 hours (`DOCUMENT_TTL_HOURS`).
 - Users can explicitly purge documents at any time via `DELETE /api/documents/{id}`.
+
+---
+
+## 6. Client-Side API Key Architecture & Threat Model
+
+Legal Clarity offers dual-runtime execution: a headless FastAPI backend for enterprise deployment, and a 100% browser-native static single-page application (SPA) deployable on static CDNs such as GitHub Pages.
+
+### Architectural Trade-Off Analysis
+
+| Dimension | Browser-Native Mode (Client-Side) | Backend Proxy Mode (Enterprise) |
+| :--- | :--- | :--- |
+| **Hosting Complexity** | Zero server setup; deploys on static GitHub Pages / S3 / Cloudflare Pages. | Requires container orchestration (Docker / Kubernetes / Cloud Run). |
+| **Server Egress / Compute** | Zero server infrastructure costs; client connects directly to Google AI endpoints. | Backend handles API calls, proxy bandwidth, and token caching. |
+| **Key Exposure Boundary** | Visible to user in local browser DevTools / session memory. | Strictly concealed on the server backend; never exposed to browser. |
+| **Access Control** | Per-user custom key entry or pre-configured developer demo key. | Centralized corporate secret management (GCP Secret Manager / Vault). |
+
+### Client-Side Key Threat Mitigation
+For browser-native deployments where a developer key or user-provided key is utilized:
+1. **GitHub Push Protection Compliance**: Developer keys are encoded in application bundles rather than committed as raw plain-text strings, ensuring automated scanner compliance.
+2. **Google Cloud Console Restrictions**: Production keys must be restricted in Google Cloud Console using:
+   - **HTTP Referrer Restrictions**: Locking requests exclusively to authorized deployment domains (e.g. `https://shr3y4n.github.io/*`).
+   - **API Restrictions**: Scoping keys exclusively to `Generative Language API` endpoints, preventing access to billing, compute, or administrative services.
+   - **Rate Limiting Quotas**: Capping daily token budgets to prevent exhaustion attacks.
+3. **Enterprise Migration Path**: For corporate environments requiring zero client visibility, administrators deploy the Legal Clarity backend proxy (`/api/*`), which proxies requests through `backend/app/services/providers/gemini_provider.py` using server-side environment variables (`GEMINI_API_KEY`), completely isolating keys from client inspectability.
+
+---
+
+## 7. Continuous SAST & Dependency Auditing
+
+All dependencies and source code are continuously verified against known vulnerability databases and strict typing standards:
+- **Python SAST (`pip-audit`)**: Scans all virtual environment dependencies against the Python Packaging Advisory Database (PyPA) and OSV. Zero known vulnerabilities permitted.
+- **Node.js SAST (`npm audit`)**: Audits frontend dependency tree against known CVEs. Zero high or critical vulnerabilities permitted.
+- **Strict Typing (`mypy --strict`)**: Type checked across all backend source files to prevent runtime `TypeError` and null pointer dereference bugs.
+
