@@ -27,8 +27,9 @@ def extract_docx(file_bytes: bytes) -> Tuple[List[Page], str]:
         t = p.text.strip()
         if not t:
             continue
-        is_heading = p.style.name.startswith("Heading") or bool(_SECTION_PATTERN.match(t))
-        paragraphs_text.append((t, p.style.name, is_heading))
+        style_name = p.style.name if p.style and getattr(p.style, "name", None) else ""
+        is_heading = style_name.startswith("Heading") or bool(_SECTION_PATTERN.match(t))
+        paragraphs_text.append((t, style_name, is_heading))
 
     # Also extract table text
     for table in doc.tables:

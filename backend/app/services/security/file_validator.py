@@ -1,3 +1,18 @@
+r"""
+File Ingestion Security and Validation Layer.
+
+Security Threats Addressed:
+1. Path Traversal & Shell Injection: Malicious filenames containing directory traversal
+   sequences (`../`, `..\`) or shell meta-characters are sanitized to benign basenames.
+2. File Type Spoofing: Extensions are treated as unverified hints; binary magic bytes
+   (`%PDF`, PK zip headers) are strictly verified before passing buffers to parsers.
+3. Resource Exhaustion / Zip Bombing: Upload streams are read with a bounded buffer cap
+   (`settings.MAX_UPLOAD_SIZE_MB`), rejecting oversized payloads with HTTP 413. DOCX
+   packages are checked in memory for `[Content_Types].xml` without disk extraction.
+4. Binary Injection in Text Files: Plaintext uploads are inspected for null bytes (`\x00`)
+   to prevent disguised compiled binaries or shellcode from entering the pipeline.
+"""
+
 import os
 import re
 import uuid
@@ -18,13 +33,20 @@ ZIP_MAGIC = b"PK\x03\x04"
 
 
 class FileValidationError(HTTPException):
+    """Raised when an uploaded file violates security constraints, MIME signatures, or structural integrity."""
     def __init__(self, detail: str):
         super().__init__(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
 
 def sanitize_filename(filename: str) -> str:
     """
-    Sanitizes user filename, removing path traversal attempts and special characters.
+    Sanitizes client-supplied filenames to eliminate directory traversal and command injection.
+
+    Transforms input by:
+    1. Extracting strictly the basename, dropping directory path elements (`/` or `\\`).
+    2. Filtering to an alphanumeric and safe punctuation whitelist `[a-zA-Z0-9_-. ()]`.
+    3. Stripping leading dots to prevent hidden system file creation.
+    4. Truncating length to 128 characters to avoid buffer or filesystem limits.
     """
     if not filename:
         return f"document_{uuid.uuid4().hex[:8]}.txt"
@@ -39,8 +61,18 @@ def sanitize_filename(filename: str) -> str:
 
 async def validate_and_read_upload(file: UploadFile) -> Tuple[str, bytes, str]:
     """
-    Validates uploaded file against size, extension, and binary signatures.
-    Returns (sanitized_filename, file_bytes, detected_mime).
+    Performs comprehensive pre-parse validation and safe buffer reading of uploaded documents.
+
+    Validation Pipeline:
+    1. Extension verification against allowed whitelist (`.pdf`, `.docx`, `.txt`).
+    2. Bounded stream reading enforcing `MAX_UPLOAD_SIZE_MB` with overflow guard.
+    3. Zero-byte rejection.
+    4. Binary magic-byte inspection matching true file signatures.
+    5. In-memory DOCX OpenXML package table-of-contents validation.
+    6. Text encoding safety and binary null-byte checks.
+
+    Returns:
+        Tuple of (sanitized_filename, file_bytes, detected_mime_type)
     """
     raw_filename = file.filename or "document.txt"
     sanitized_name = sanitize_filename(raw_filename)
