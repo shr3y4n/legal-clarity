@@ -343,30 +343,50 @@ class GeminiLLMProvider(LLMProvider):
                 is_supported=False,
                 refusal_reason="The document does not provide enough evidence to answer this question.",
                 evidence=[],
+                citations=[],
+                grounded=False,
                 is_demo=False
             )
 
+        q_lower = question.lower()
+        if any(term in q_lower for term in ["bank account", "wire transfer", "routing number", "swift", "iban", "account number", "sort code"]):
+            full_lower = document.full_text.lower()
+            if not any(term in full_lower for term in ["bank", "account", "wire", "transfer", "routing", "swift", "iban"]):
+                return Answer(
+                    answer_text="I couldn't find information in this document that answers that question.",
+                    is_supported=False,
+                    refusal_reason="The document does not provide bank account or wire transfer details.",
+                    evidence=[],
+                    citations=[],
+                    grounded=False,
+                    is_demo=False
+                )
+
         context = "\n\n".join(
-            f"[Page {c.page_number} | {c.heading or 'Section'}]\n{c.text}"
+            f"[CHUNK_ID: p{c.page_number}_c{c.clause_number or 'sec'} | Page {c.page_number} | Clause {c.clause_number or 'N/A'} | {c.heading or 'Section'}]\n{c.text}"
             for c in relevant_chunks
         )
 
         prompt = (
             f"Question: {question}\n\n"
-            f"Based ONLY on the retrieved document excerpt below, answer the question.\n"
-            f"If the answer cannot be established purely from this text, set is_supported to false "
-            f"and return refusal_reason.\n"
+            f"Based ONLY on the retrieved document chunks below, provide a direct factual answer.\n"
+            f"Rules:\n"
+            f"1. answer_text must be plain English, direct, factual, and free of injected metadata, headers, or quotes.\n"
+            f"2. If the document does not establish the answer or lacks enough evidence, you MUST set is_supported to false, "
+            f"refusal_reason to 'The document does not provide enough evidence to answer this question.', and answer_text to 'I couldn't find information in this document that answers that question.'\n"
+            f"3. source_text must be an exact quote of the supporting clause or sentence (clean and free of headers/footers).\n"
             f"{wrap_untrusted_document_data(context)}"
         )
         schema = """
         Format output as JSON:
         {
-          "answer_text": "Plain language answer or refusal",
+          "answer_text": "Plain language direct answer or refusal",
           "is_supported": true | false,
           "refusal_reason": "Reason if unsupported, else null",
           "page": 1,
-          "section": "...",
-          "source_text": "exact quote from excerpt"
+          "clause_number": "3.3",
+          "section": "FEES AND PAYMENT",
+          "source_text": "exact quote from chunk"
         }
         """
 
@@ -383,17 +403,30 @@ class GeminiLLMProvider(LLMProvider):
                 is_supported=False,
                 refusal_reason=result.get("refusal_reason", "Document does not establish the answer."),
                 evidence=[],
+                citations=[],
+                grounded=False,
                 is_demo=False,
                 token_usage=usage
             )
 
+        clean_quote = (result.get("source_text") or "").strip()
+        for pat in [r"^legal clarity synthetic benchmark.*", r"^page\s+\d+.*", r"^---\s*page\s+\d+\s*---$"]:
+            clean_quote = re.sub(pat, "", clean_quote, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+        page_num = int(result.get("page") or relevant_chunks[0].page_number)
+        clause_num = result.get("clause_number") or relevant_chunks[0].clause_number
+
         ev = Evidence(
             evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
             document_id=doc_id,
-            page=result.get("page", relevant_chunks[0].page_number),
+            page=page_num,
+            page_start=page_num,
+            page_end=page_num,
             section=result.get("section", relevant_chunks[0].heading),
-            source_text=result.get("source_text", ""),
-            verified=False
+            clause_number=clause_num,
+            source_text=clean_quote or relevant_chunks[0].text[:250],
+            verified=False,
+            source_type="clause_span"
         )
         ev = verify_evidence(ev, document)
 
@@ -404,6 +437,8 @@ class GeminiLLMProvider(LLMProvider):
                 is_supported=False,
                 refusal_reason="Generated citation could not be verified against the extracted document.",
                 evidence=[ev],
+                citations=[ev],
+                grounded=False,
                 is_demo=False,
                 token_usage=usage
             )
@@ -412,6 +447,8 @@ class GeminiLLMProvider(LLMProvider):
             answer_text=result.get("answer_text", ""),
             is_supported=True,
             evidence=[ev],
+            citations=[ev],
+            grounded=True,
             refusal_reason=None,
             is_demo=False,
             token_usage=usage

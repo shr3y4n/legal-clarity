@@ -18,13 +18,35 @@ export const DocumentCanvas: React.FC<DocumentCanvasProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<{ [key: number]: HTMLElement | null }>({});
 
-  // Scroll to highlighted page/section
+  // Scroll to highlighted clause section or page
   useEffect(() => {
     if (highlightedEvidence) {
-      const pageEl = pageRefs.current[highlightedEvidence.page];
-      if (pageEl) {
-        pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      setTimeout(() => {
+        const secId = highlightedEvidence.clause_number
+          ? `p${highlightedEvidence.page}_${highlightedEvidence.clause_number.replace(/\./g, '_').replace(/[()]/g, '')}`
+          : null;
+        let targetEl = secId ? window.document.getElementById(secId) : null;
+
+        if (!targetEl && highlightedEvidence.source_text && containerRef.current) {
+          const snippet = highlightedEvidence.source_text.slice(0, 30);
+          const sections = containerRef.current.querySelectorAll('section');
+          for (const s of Array.from(sections)) {
+            if (s.textContent?.includes(snippet)) {
+              targetEl = s as HTMLElement;
+              break;
+            }
+          }
+        }
+
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          const pageEl = pageRefs.current[highlightedEvidence.page];
+          if (pageEl) {
+            pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 50);
     }
   }, [highlightedEvidence]);
 

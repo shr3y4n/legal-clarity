@@ -11,6 +11,12 @@ export interface Evidence {
   verified: boolean;
   verification_score: number;
   verification_note?: string | null;
+  page_start?: number | null;
+  page_end?: number | null;
+  start_offset?: number | null;
+  end_offset?: number | null;
+  bbox?: number[] | null;
+  source_type?: string | null;
 }
 
 export interface Claim {
@@ -27,6 +33,10 @@ export interface Section {
   text: string;
   start_char: number;
   end_char: number;
+  page_start?: number | null;
+  page_end?: number | null;
+  bbox?: number[] | null;
+  source_type?: string | null;
 }
 
 export interface Page {
@@ -112,6 +122,8 @@ export interface Answer {
   answer_text: string;
   is_supported: boolean;
   evidence: Evidence[];
+  citations?: Evidence[];
+  grounded?: boolean;
   refusal_reason?: string | null;
   is_demo: boolean;
 }

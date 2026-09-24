@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,12 @@ class Evidence(BaseModel):
     verified: bool = Field(default=False, description="Whether cited text was strictly verified against the extracted text")
     verification_score: float = Field(default=0.0, description="Confidence score of text containment (0.0 - 1.0)")
     verification_note: Optional[str] = Field(default=None, description="Verification details or failure reason")
+    page_start: Optional[int] = Field(default=None, description="Start page for multi-page clauses")
+    page_end: Optional[int] = Field(default=None, description="End page for multi-page clauses")
+    start_offset: Optional[int] = Field(default=None, description="Start character offset in page/document")
+    end_offset: Optional[int] = Field(default=None, description="End character offset in page/document")
+    bbox: Optional[List[float]] = Field(default=None, description="Bounding box [x0, y0, x1, y1] if PDF")
+    source_type: Optional[str] = Field(default="native_pdf", description="Source extraction type e.g. native_pdf or ocr")
 
 
 class Claim(BaseModel):
@@ -42,6 +48,10 @@ class Section(BaseModel):
     text: str
     start_char: int
     end_char: int
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+    bbox: Optional[List[float]] = None
+    source_type: Optional[str] = "native_pdf"
 
 
 class Page(BaseModel):
@@ -164,10 +174,20 @@ class Answer(BaseModel):
     answer_text: str
     is_supported: bool
     evidence: List[Evidence] = Field(default_factory=list)
+    citations: List[Evidence] = Field(default_factory=list)
+    grounded: Optional[bool] = None
     refusal_reason: Optional[str] = None
     is_demo: bool = False
     is_cached: bool = False
     token_usage: Optional[TokenUsage] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.citations and self.evidence:
+            self.citations = list(self.evidence)
+        elif not self.evidence and self.citations:
+            self.evidence = list(self.citations)
+        if self.grounded is None:
+            self.grounded = self.is_supported
 
 
 class ComparisonChange(BaseModel):

@@ -151,22 +151,47 @@ export const AskPanel: React.FC<AskPanelProps> = ({ documentId, onSelectEvidence
                 <p className="text-xs text-[#191919] leading-relaxed m-0">{msg.answer.answer_text}</p>
 
                 {/* Grounding Evidence Anchor */}
-                {msg.answer.is_supported && msg.answer.evidence && msg.answer.evidence.length > 0 && (
-                  <div className="pt-2 border-t border-[#f3f3f0] space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-semibold text-[#585854]">Grounded Citation:</span>
-                      <button
-                        onClick={() => onSelectEvidence(msg.answer.evidence[0])}
-                        className="inline-flex items-center gap-1 text-[#1d3557] hover:underline font-medium cursor-pointer"
-                      >
-                        <span>View on Page {msg.answer.evidence[0].page}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="p-2 bg-[#f8f8f6] border border-[#e5e5e0] rounded-xs font-document text-[12px] italic text-[#585854]">
-                      "{msg.answer.evidence[0].source_text}"
-                    </div>
-                  </div>
+                {msg.answer.is_supported && (msg.answer.citations?.length || msg.answer.evidence?.length) && (
+                  (() => {
+                    const citList = (msg.answer.citations && msg.answer.citations.length > 0)
+                      ? msg.answer.citations
+                      : msg.answer.evidence;
+                    const cit = citList[0];
+                    if (!cit || !cit.source_text) return null;
+
+                    return (
+                      <div className="pt-2.5 border-t border-[#e5e5e0] space-y-2">
+                        <div className="flex items-center justify-between text-[11px] gap-2">
+                          <div className="flex items-center gap-1.5 font-medium text-[#191919] min-w-0">
+                            <span className="font-semibold text-[#1d3557]">Source:</span>
+                            {cit.clause_number && (
+                              <span className="font-semibold text-[#191919]">Clause {cit.clause_number}</span>
+                            )}
+                            {cit.clause_number && cit.section && <span className="text-[#82827c]">·</span>}
+                            {cit.section && (
+                              <span className="truncate max-w-[180px] text-[#585854]" title={cit.section}>
+                                {cit.section}
+                              </span>
+                            )}
+                            <span className="bg-[#eff6ff] text-[#1e40af] border border-[#bfdbfe] px-1.5 py-0.5 rounded-xs text-[10px] font-mono-legal shrink-0">
+                              Page {cit.page}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => onSelectEvidence(cit)}
+                            className="inline-flex items-center gap-1 text-[#1d3557] hover:underline font-medium cursor-pointer shrink-0 text-[11px]"
+                            title="Highlight and focus this exact clause in document"
+                          >
+                            <span>View in document</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <blockquote className="p-2.5 bg-[#f8f8f6] border-l-3 border-[#1d3557] rounded-r-xs font-document text-[12px] italic text-[#40403c] leading-relaxed m-0">
+                          "{cit.source_text}"
+                        </blockquote>
+                      </div>
+                    );
+                  })()
                 )}
 
                 {/* Refusal Explanation if unsupported */}

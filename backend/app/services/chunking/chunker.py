@@ -3,7 +3,7 @@ from typing import List
 from app.models.schemas import Chunk, Document
 
 
-def chunk_document(doc: Document, max_chars: int = 1500, overlap_chars: int = 200) -> List[Chunk]:
+def chunk_document(doc: Document, max_chars: int = 900, overlap_chars: int = 150) -> List[Chunk]:
     """
     Splits a document into traceable chunks. Each chunk retains exact page number,
     section ID, heading, and clause numbering for strict evidence attribution.
@@ -19,10 +19,13 @@ def chunk_document(doc: Document, max_chars: int = 1500, overlap_chars: int = 20
                 if not sec_text:
                     continue
 
+                clause_tag = f"c{sec.clause_number.replace('.', '_')}" if sec.clause_number else f"s{chunk_counter}"
+                chk_id = f"chk_p{page.page_number}_{clause_tag}"
+
                 if len(sec_text) <= max_chars:
                     chunks.append(
                         Chunk(
-                            chunk_id=f"chk_{doc.metadata.document_id}_{chunk_counter}",
+                            chunk_id=chk_id,
                             document_id=doc.metadata.document_id,
                             page_number=page.page_number,
                             section_id=sec.section_id,

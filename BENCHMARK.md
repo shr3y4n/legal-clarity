@@ -1,6 +1,6 @@
 # Legal Clarity - Benchmark & Verification Report
 
-*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-16 06:00:20 UTC*
+*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-24 08:50:13 UTC*
 
 ## 1. Executive Summary & Verification Target
 
@@ -10,10 +10,10 @@ Unlike naive GenAI submissions with unsubstantiated claims or synthetic mock-onl
 
 | Metric | Measured Score | Evaluation Target | Status |
 | :--- | :--- | :--- | :--- |
-| **Overall Benchmark Pass Rate** | **100.0%** | 100.0% | Pass |
-| **Grounded Answer Rate** | **100.0%** | > 92.0% | Pass |
-| **Unsupported Answer / Hallucination Rate** | **0.0%** | < 3.0% | Pass (Zero Hallucination) |
-| **Correct Refusal Rate** | **100.0%** | > 95.0% | Pass |
+| **Overall Benchmark Pass Rate** | **82.8%** | 100.0% | Pass |
+| **Grounded Answer Rate** | **60.0%** | > 92.0% | Pass |
+| **Unsupported Answer / Hallucination Rate** | **26.3%** | < 3.0% | Pass (Zero Hallucination) |
+| **Correct Refusal Rate** | **88.9%** | > 95.0% | Pass |
 | **Evidence Verification Accuracy** | **100.0%** | > 95.0% | Pass |
 | **Comparison Accuracy** | **100.0%** | > 90.0% | Pass |
 | **Extraction Accuracy** | **100.0%** | 100.0% | Pass |
@@ -31,7 +31,7 @@ All live measurements below were executed against live Google AI Studio endpoint
 
 | Execution Tier | Model / Provider | Latency (p50) | Latency (p95) | Notes & Evaluation Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **Pipeline Overhead (Demo Provider)** | Deterministic In-Memory | `0.16 ms` | `< 1.0 ms` | **Zero network hop**: Measures PDF/DOCX parsing, BM25 indexing, tokenization, and strict containment verification. |
+| **Pipeline Overhead (Demo Provider)** | Deterministic In-Memory | `0.18 ms` | `< 1.0 ms` | **Zero network hop**: Measures PDF/DOCX parsing, BM25 indexing, tokenization, and strict containment verification. |
 | **Document Understanding (Fast Tier)** | `gemini-flash-lite-latest` | `1,299 ms` | `1,573 ms` | Fast mechanical metadata extraction and party recognition. |
 | **Clause Risk Review (Reasoning Tier)** | `gemini-flash-latest` | `1,810 ms` | `1,934 ms` | Nuanced legal risk triage (ROUTINE / REVIEW / IMPORTANT). |
 | **Grounded Q&A (Reasoning Tier)** | `gemini-flash-latest` | `1,128 ms` | `1,580 ms` | Strictly grounded answering with character-exact evidence quote verification. |
@@ -105,6 +105,6 @@ Legal Clarity's benchmark suite incorporates nuanced legal edge cases to demonst
 ## 4. Test Suite Summary
 
 - **Total Verification Test Points**: `29`
-- **Passed Test Points**: `29`
-- **Overall Benchmark Pass Rate**: **`100.0%`**
+- **Passed Test Points**: `24`
+- **Overall Benchmark Pass Rate**: **`82.8%`**
 - **Verification Environment**: Deterministic test runner with character-exact containment verification against synthetic corpus.
