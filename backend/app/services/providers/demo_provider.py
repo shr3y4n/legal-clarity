@@ -8,6 +8,7 @@ from app.models.schemas import (
     ChecklistItem,
     Chunk,
     Claim,
+    ClauseOption,
     Comparison,
     ComparisonChange,
     Document,
@@ -15,6 +16,7 @@ from app.models.schemas import (
     DocumentReviewResponse,
     DocumentUnderstanding,
     Evidence,
+    InconsistencyItem,
     LawyerPrepResponse,
     LawyerQuestion,
     ReviewItem,
@@ -52,6 +54,180 @@ def estimate_token_usage(
         total_tokens=total,
         savings_vs_full_document_pct=savings
     )
+
+
+def generate_options_for_clause(title: str, level: ReviewLevel, text: str, lawyer_q: str) -> List[ClauseOption]:
+    """Generates concrete decision options and proposed redlines for a clause."""
+    text_lower = text.lower()
+    title_lower = title.lower()
+
+    if any(w in text_lower or w in title_lower for w in ["indemn", "hold harmless"]):
+        counter = "Each party's aggregate indemnification liability shall be limited to direct damages and capped at the total fees paid under this Agreement in the preceding twelve (12) months, excluding claims arising from gross negligence or willful misconduct."
+    elif any(w in text_lower or w in title_lower for w in ["liability limit", "limitation of liability", "cap"]):
+        counter = "In no event shall either party's aggregate liability exceed the total fees paid or payable under this Agreement in the twelve (12) months preceding the incident, with reciprocal carve-outs for confidentiality and IP breach."
+    elif any(w in text_lower or w in title_lower for w in ["terminat", "convenience"]):
+        counter = "Either party may terminate this Agreement upon sixty (60) days' prior written notice, or immediately upon thirty (30) days' written notice of material breach if such breach remains uncured."
+    elif any(w in text_lower or w in title_lower for w in ["renew", "automatic"]):
+        counter = "This Agreement shall automatically renew for successive one (1) year terms unless either party provides written notice of non-renewal at least thirty (30) days prior to term expiration, provided Provider issues a written reminder at least sixty (60) days prior."
+    elif any(w in text_lower or w in title_lower for w in ["unilateral", "modify", "amendment"]):
+        counter = "No amendment, supplement, or modification of this Agreement shall be binding unless executed in writing and signed by authorized representatives of both parties."
+    elif any(w in text_lower or w in title_lower for w in ["deposit", "refund", "deduct"]):
+        counter = "The security deposit shall be returned within twenty-one (21) days following vacatur, accompanied by an itemized statement and verified receipts for any legitimate deductions."
+    elif any(w in text_lower or w in title_lower for w in ["late fee", "interest", "penalty"]):
+        counter = "A late fee not exceeding 2% per month or $50 (whichever is lower) shall apply only after a mandatory five (5) day written notice and grace period following the due date."
+    else:
+        counter = "The parties agree to mutual representations and commercially reasonable standards of good faith in fulfilling the obligations set forth in this provision."
+
+    return [
+        ClauseOption(
+            option_type="Accept As-Is",
+            description="Proceed with the clause as currently drafted if commercial timeline, pricing, or strategic value outweighs downside legal risk.",
+            proposed_counter_language=None,
+            action_step="Document internal approval and ensure operational/insurance compliance with this obligation."
+        ),
+        ClauseOption(
+            option_type="Request Redline / Counter-Proposal",
+            description="Propose balanced contract language to cap unilateral exposure, insert reciprocal protections, or establish reasonable cure periods.",
+            proposed_counter_language=counter,
+            action_step="Submit the suggested balanced redline clause during contract review or negotiation rounds."
+        ),
+        ClauseOption(
+            option_type="Escalate to Legal Counsel",
+            description="Seek attorney counsel to evaluate state/jurisdiction specific enforceability, case law precedents, and statutory protections.",
+            proposed_counter_language=None,
+            action_step=f"Consult qualified legal counsel using this specific question: '{lawyer_q}'"
+        )
+    ]
+
+
+def detect_inconsistencies(document: Document) -> List[InconsistencyItem]:
+    """Detects substantive contradictions, divergent notice periods, and conflicting terms across clauses."""
+    inconsistencies: List[InconsistencyItem] = []
+    doc_id = document.metadata.document_id
+
+    sections_list = []
+    for page in document.pages:
+        for sec in page.sections:
+            sections_list.append((page.page_number, sec))
+
+    # 1. Limitation of Liability vs Indemnification Scope Ambiguity
+    liability_sec = None
+    indemn_sec = None
+    for page_num, sec in sections_list:
+        sec_lower = sec.text.lower()
+        head_lower = (sec.heading or "").lower()
+        if ("liability" in sec_lower or "liability" in head_lower) and any(w in sec_lower for w in ["limit", "cap", "aggregate", "fees paid"]):
+            if not liability_sec:
+                liability_sec = (page_num, sec)
+        if ("indemn" in sec_lower or "indemn" in head_lower or "hold harmless" in sec_lower):
+            if not indemn_sec:
+                indemn_sec = (page_num, sec)
+
+    if liability_sec and indemn_sec:
+        l_page, l_sec = liability_sec
+        i_page, i_sec = indemn_sec
+        l_text = l_sec.text
+        i_text = i_sec.text
+        if "indemn" not in l_text.lower() and "subject to section" not in i_text.lower() and "capped" not in i_text.lower():
+            inconsistencies.append(
+                InconsistencyItem(
+                    inconsistency_id=f"inc_{uuid.uuid4().hex[:8]}",
+                    title="Liability Limitation vs. Indemnification Ambiguity",
+                    description=(
+                        "Potential legal tension: The Limitation of Liability provision sets an aggregate financial cap, "
+                        "while the Indemnification clause creates uncapped third-party defense and indemnity duties without clarifying "
+                        "if indemnification is subject to or carved out from the liability ceiling."
+                    ),
+                    clause_a_title=l_sec.heading or "Limitation of Liability",
+                    clause_a_evidence=Evidence(
+                        evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                        document_id=doc_id,
+                        page=l_page,
+                        section=l_sec.heading or "Limitation of Liability",
+                        clause_number=l_sec.clause_number,
+                        source_text=l_text.split(".")[0].strip() + ".",
+                        verified=True,
+                        verification_score=1.0,
+                        verification_note="Verified against source document text."
+                    ),
+                    clause_b_title=i_sec.heading or "Indemnification",
+                    clause_b_evidence=Evidence(
+                        evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                        document_id=doc_id,
+                        page=i_page,
+                        section=i_sec.heading or "Indemnification",
+                        clause_number=i_sec.clause_number,
+                        source_text=i_text.split(".")[0].strip() + ".",
+                        verified=True,
+                        verification_score=1.0,
+                        verification_note="Verified against source document text."
+                    ),
+                    suggested_remedy=(
+                        "Harmonize both clauses by expressly specifying in the Limitation of Liability section: "
+                        "'Except for indemnification obligations under Section X, neither party's aggregate liability shall exceed...'"
+                    )
+                )
+            )
+
+    # 2. Conflicting Operational Notice Windows (e.g. 30 vs 60 vs 90 days)
+    notice_clauses = []
+    for page_num, sec in sections_list:
+        sec_lower = sec.text.lower()
+        days_match = re.findall(r"(\d+)\s+(?:calendar\s+|business\s+)?days", sec_lower)
+        if days_match and any(w in sec_lower for w in ["terminat", "renew", "notice", "deposit", "cure"]):
+            for d in days_match:
+                notice_clauses.append((int(d), page_num, sec))
+
+    if len(notice_clauses) >= 2:
+        seen_days = {}
+        for d, p, s in notice_clauses:
+            if d not in seen_days:
+                seen_days[d] = (p, s)
+        days_sorted = sorted(seen_days.keys())
+        if len(days_sorted) >= 2:
+            d1, d2 = days_sorted[0], days_sorted[-1]
+            p1, s1 = seen_days[d1]
+            p2, s2 = seen_days[d2]
+            if s1 != s2:
+                inconsistencies.append(
+                    InconsistencyItem(
+                        inconsistency_id=f"inc_{uuid.uuid4().hex[:8]}",
+                        title=f"Conflicting Operational Timeframes ({d1} Days vs. {d2} Days)",
+                        description=(
+                            f"Discrepancy in notice/compliance windows: '{s1.heading or 'First Provision'}' stipulates a {d1}-day window, "
+                            f"whereas '{s2.heading or 'Second Provision'}' imposes a {d2}-day requirement. This divergence creates ambiguity regarding which operational deadline governs."
+                        ),
+                        clause_a_title=s1.heading or "Operational Provision A",
+                        clause_a_evidence=Evidence(
+                            evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                            document_id=doc_id,
+                            page=p1,
+                            section=s1.heading or f"Section p{p1}",
+                            clause_number=s1.clause_number,
+                            source_text=s1.text.split(".")[0].strip() + ".",
+                            verified=True,
+                            verification_score=1.0,
+                            verification_note="Verified against source document text."
+                        ),
+                        clause_b_title=s2.heading or "Operational Provision B",
+                        clause_b_evidence=Evidence(
+                            evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                            document_id=doc_id,
+                            page=p2,
+                            section=s2.heading or f"Section p{p2}",
+                            clause_number=s2.clause_number,
+                            source_text=s2.text.split(".")[0].strip() + ".",
+                            verified=True,
+                            verification_score=1.0,
+                            verification_note="Verified against source document text."
+                        ),
+                        suggested_remedy=(
+                            f"Standardize operational notice timeframes across provisions, or include express precedence language (e.g. 'Notwithstanding anything to the contrary in Section {s1.clause_number or 'X'}...')."
+                        )
+                    )
+                )
+
+    return inconsistencies
 
 
 class DemoLLMProvider(LLMProvider):
@@ -371,6 +547,17 @@ class DemoLLMProvider(LLMProvider):
                 )
             )
 
+        # Attach options and potential next steps to each reviewed clause
+        for item in items:
+            item.options_and_next_steps = generate_options_for_clause(
+                title=item.title,
+                level=item.level,
+                text=item.evidence.source_text,
+                lawyer_q=item.suggested_lawyer_question
+            )
+
+        inconsistencies = detect_inconsistencies(document)
+
         routine_count = sum(1 for i in items if i.level == ReviewLevel.ROUTINE)
         review_count = sum(1 for i in items if i.level == ReviewLevel.REVIEW)
         important_count = sum(1 for i in items if i.level == ReviewLevel.IMPORTANT_TO_REVIEW)
@@ -384,10 +571,12 @@ class DemoLLMProvider(LLMProvider):
         return DocumentReviewResponse(
             document_id=doc_id,
             review_items=items,
+            inconsistencies=inconsistencies,
             total_clauses_reviewed=len(items),
             routine_count=routine_count,
             review_count=review_count,
             important_count=important_count,
+            inconsistency_count=len(inconsistencies),
             is_demo=True,
             token_usage=tokens
         )

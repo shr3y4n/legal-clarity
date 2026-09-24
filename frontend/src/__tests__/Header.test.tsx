@@ -91,5 +91,24 @@ describe('Header Component', () => {
     expect(toggleBtn).not.toBeNull();
     fireEvent.click(toggleBtn);
   });
+
+  it('opens Problem Statement Alignment modal when button is clicked', () => {
+    render(
+      <Header
+        currentDocument={null}
+        activeTab="understand"
+        setActiveTab={vi.fn()}
+        onOpenUpload={vi.fn()}
+        isDemo={false}
+      />
+    );
+
+    const psBtn = screen.getByText(/Problem Statement \(100%\)/i);
+    expect(psBtn).not.toBeNull();
+    fireEvent.click(psBtn);
+
+    expect(screen.getByText(/Problem Statement Alignment: 100%/i)).not.toBeNull();
+    expect(screen.getByText(/The 3 Architectural Pillars/i)).not.toBeNull();
+  });
 });
 

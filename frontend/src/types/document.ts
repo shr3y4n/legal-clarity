@@ -51,6 +51,24 @@ export interface Document {
   full_text: string;
 }
 
+export interface ClauseOption {
+  option_type: string;
+  description: string;
+  proposed_counter_language?: string | null;
+  action_step: string;
+}
+
+export interface InconsistencyItem {
+  inconsistency_id: string;
+  title: string;
+  description: string;
+  clause_a_title: string;
+  clause_a_evidence: Evidence;
+  clause_b_title: string;
+  clause_b_evidence: Evidence;
+  suggested_remedy: string;
+}
+
 export interface ReviewItem {
   item_id: string;
   title: string;
@@ -59,15 +77,18 @@ export interface ReviewItem {
   why_highlighted: string;
   evidence: Evidence;
   suggested_lawyer_question: string;
+  options_and_next_steps?: ClauseOption[];
 }
 
 export interface DocumentReviewResponse {
   document_id: string;
   review_items: ReviewItem[];
+  inconsistencies?: InconsistencyItem[];
   total_clauses_reviewed: number;
   routine_count: number;
   review_count: number;
   important_count: number;
+  inconsistency_count?: number;
   is_demo: boolean;
 }
 

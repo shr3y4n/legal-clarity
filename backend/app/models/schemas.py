@@ -77,6 +77,24 @@ class Chunk(BaseModel):
     token_count: int
 
 
+class ClauseOption(BaseModel):
+    option_type: str = Field(description="e.g. Accept As-Is, Request Redline / Counter-Proposal, Escalate to Counsel")
+    description: str = Field(description="Strategic advice on the trade-offs of this option")
+    proposed_counter_language: Optional[str] = Field(default=None, description="Suggested balanced contractual language to counter-propose")
+    action_step: str = Field(description="Concrete immediate step the user should take")
+
+
+class InconsistencyItem(BaseModel):
+    inconsistency_id: str
+    title: str
+    description: str
+    clause_a_title: str
+    clause_a_evidence: Evidence
+    clause_b_title: str
+    clause_b_evidence: Evidence
+    suggested_remedy: str
+
+
 class ReviewItem(BaseModel):
     item_id: str
     title: str
@@ -85,6 +103,7 @@ class ReviewItem(BaseModel):
     why_highlighted: str
     evidence: Evidence
     suggested_lawyer_question: str
+    options_and_next_steps: List[ClauseOption] = Field(default_factory=list)
 
 
 class TokenUsage(BaseModel):
@@ -107,13 +126,16 @@ class CacheStatsResponse(BaseModel):
 class DocumentReviewResponse(BaseModel):
     document_id: str
     review_items: List[ReviewItem]
+    inconsistencies: List[InconsistencyItem] = Field(default_factory=list)
     total_clauses_reviewed: int
     routine_count: int
     review_count: int
     important_count: int
+    inconsistency_count: int = 0
     is_demo: bool = False
     is_cached: bool = False
     token_usage: Optional[TokenUsage] = None
+
 
 
 class DocumentUnderstanding(BaseModel):

@@ -61,7 +61,10 @@ async def test_full_document_api_lifecycle():
         # 4. Review document
         res_rev = await client.get(f"/api/documents/{doc_id}/review")
         assert res_rev.status_code == 200
-        assert res_rev.json()["total_clauses_reviewed"] >= 1
+        rev_data = res_rev.json()
+        assert rev_data["total_clauses_reviewed"] >= 1
+        assert "inconsistencies" in rev_data
+        assert "options_and_next_steps" in rev_data["review_items"][0]
 
         # 5. Ask document (answerable)
         res_ask = await client.post(

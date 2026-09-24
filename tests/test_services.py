@@ -70,6 +70,55 @@ async def test_review_service_classification():
     for item in review_resp.review_items:
         assert item.why_highlighted.startswith("This was highlighted")
         assert item.evidence.verified is True
+        assert len(item.options_and_next_steps) >= 3
+
+
+@pytest.mark.asyncio
+async def test_inconsistencies_and_options_detection():
+    text = (
+        "CONFIDENTIAL COMMERCIAL AGREEMENT\n\n"
+        "SECTION 1.0 TERMINATION FOR CONVENIENCE\n"
+        "Either party may terminate upon 30 days prior written notice.\n\n"
+        "SECTION 2.0 NON-RENEWAL NOTICE\n"
+        "Notice of non-renewal must be delivered at least 60 days prior to expiration.\n\n"
+        "SECTION 3.0 LIMITATION OF LIABILITY\n"
+        "Total aggregate liability under this agreement shall be capped at fees paid in prior 3 months.\n\n"
+        "SECTION 4.0 INDEMNIFICATION\n"
+        "Provider shall indemnify and hold harmless customer from any and all damages without limit.\n"
+    )
+    metadata = DocumentMetadata(
+        document_id="doc_inconsistency_test",
+        filename="inconsistent_contract.txt",
+        sha256_hash="hash_inconsistency_test",
+        mime_type="text/plain",
+        byte_size=len(text),
+        page_count=1,
+        created_at="2026-09-24T00:00:00Z"
+    )
+    s1 = Section(section_id="p1_s1", page_number=1, heading="SECTION 1.0 TERMINATION FOR CONVENIENCE", clause_number="1.0", text="Either party may terminate upon 30 days prior written notice.", start_char=0, end_char=60)
+    s2 = Section(section_id="p1_s2", page_number=1, heading="SECTION 2.0 NON-RENEWAL NOTICE", clause_number="2.0", text="Notice of non-renewal must be delivered at least 60 days prior to expiration.", start_char=61, end_char=140)
+    s3 = Section(section_id="p1_s3", page_number=1, heading="SECTION 3.0 LIMITATION OF LIABILITY", clause_number="3.0", text="Total aggregate liability under this agreement shall be capped at fees paid in prior 3 months.", start_char=141, end_char=240)
+    s4 = Section(section_id="p1_s4", page_number=1, heading="SECTION 4.0 INDEMNIFICATION", clause_number="4.0", text="Provider shall indemnify and hold harmless customer from any and all damages without limit.", start_char=241, end_char=340)
+    p1 = Page(page_number=1, text=text, sections=[s1, s2, s3, s4])
+    doc = Document(metadata=metadata, pages=[p1], full_text=text)
+    document_store.save(doc)
+    chunks = chunk_document(doc)
+    index_document_chunks("doc_inconsistency_test", chunks)
+
+    review_resp = await get_document_review("doc_inconsistency_test")
+    assert review_resp.inconsistency_count >= 1
+    assert len(review_resp.inconsistencies) >= 1
+    inc = review_resp.inconsistencies[0]
+    assert inc.clause_a_evidence.verified is True
+    assert inc.clause_b_evidence.verified is True
+    assert len(inc.suggested_remedy) > 0
+
+    for item in review_resp.review_items:
+        assert len(item.options_and_next_steps) == 3
+        option_types = [opt.option_type for opt in item.options_and_next_steps]
+        assert "Accept As-Is" in option_types
+        assert "Request Redline / Counter-Proposal" in option_types
+        assert "Escalate to Legal Counsel" in option_types
 
 
 @pytest.mark.asyncio

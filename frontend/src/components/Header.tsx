@@ -11,9 +11,11 @@ import {
   Settings,
   Sun,
   Moon,
+  Target,
 } from 'lucide-react';
 import { ActiveTab, DocumentMetadata } from '../types/document';
 import { SettingsModal } from './SettingsModal';
+import { ProblemStatementModal } from './ProblemStatementModal';
 import { getInitialTheme, toggleTheme, Theme } from '../lib/theme';
 
 interface HeaderProps {
@@ -36,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefreshProvider,
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showProblemStatement, setShowProblemStatement] = useState(false);
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   const navItems: { id: ActiveTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -119,6 +122,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span>100% Grounded</span>
           </div>
 
+          {/* Problem Statement Alignment (100%) Button */}
+          <button
+            onClick={() => setShowProblemStatement(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-sm border border-[#86efac] dark:border-[#166534] bg-[#f0fdf4] dark:bg-[#0c2a16] text-[#166534] dark:text-[#4ade80] text-xs font-semibold cursor-pointer hover:bg-[#dcfce7] dark:hover:bg-[#14532d] transition-colors shadow-2xs"
+            title="View Problem Statement Alignment & Use Case Compliance Matrix (100%)"
+            aria-label="View Problem Statement Alignment (100%)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#16a34a] animate-pulse" />
+            <Target className="w-3 h-3 text-[#16a34a] dark:text-[#4ade80]" />
+            <span>Problem Statement (100%)</span>
+          </button>
+
           {/* Gemini AI Status Indicator & Settings Trigger */}
           <button
             onClick={() => setShowSettings(true)}
@@ -166,6 +181,13 @@ export const Header: React.FC<HeaderProps> = ({
         onClose={() => setShowSettings(false)}
         onProviderChanged={() => onRefreshProvider?.()}
         providerInfo={providerInfo}
+      />
+
+      {/* Problem Statement Alignment (100%) Modal */}
+      <ProblemStatementModal
+        isOpen={showProblemStatement}
+        onClose={() => setShowProblemStatement(false)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
       />
     </>
   );

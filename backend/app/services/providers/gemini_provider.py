@@ -13,6 +13,7 @@ from app.models.schemas import (
     ChecklistItem,
     Chunk,
     Claim,
+    ClauseOption,
     Comparison,
     ComparisonChange,
     Document,
@@ -20,6 +21,7 @@ from app.models.schemas import (
     DocumentReviewResponse,
     DocumentUnderstanding,
     Evidence,
+    InconsistencyItem,
     LawyerPrepResponse,
     LawyerQuestion,
     ReviewItem,
@@ -28,7 +30,11 @@ from app.models.schemas import (
 )
 from app.services.evidence.verifier import verify_evidence
 from app.services.providers.base import LLMProvider
-from app.services.providers.demo_provider import DemoLLMProvider
+from app.services.providers.demo_provider import (
+    DemoLLMProvider,
+    detect_inconsistencies,
+    generate_options_for_clause,
+)
 from app.services.security.prompt_shield import wrap_untrusted_document_data
 from app.utils.logger import logger
 
@@ -300,6 +306,16 @@ class GeminiLLMProvider(LLMProvider):
                 )
             )
 
+        for item in items:
+            item.options_and_next_steps = generate_options_for_clause(
+                title=item.title,
+                level=item.level,
+                text=item.evidence.source_text,
+                lawyer_q=item.suggested_lawyer_question
+            )
+
+        inconsistencies = detect_inconsistencies(document)
+
         routine_c = sum(1 for i in items if i.level == ReviewLevel.ROUTINE)
         review_c = sum(1 for i in items if i.level == ReviewLevel.REVIEW)
         important_c = sum(1 for i in items if i.level == ReviewLevel.IMPORTANT_TO_REVIEW)
@@ -307,10 +323,12 @@ class GeminiLLMProvider(LLMProvider):
         return DocumentReviewResponse(
             document_id=doc_id,
             review_items=items,
+            inconsistencies=inconsistencies,
             total_clauses_reviewed=len(items),
             routine_count=routine_c,
             review_count=review_c,
             important_count=important_c,
+            inconsistency_count=len(inconsistencies),
             is_demo=False,
             token_usage=usage
         )

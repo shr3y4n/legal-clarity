@@ -3,6 +3,7 @@ import {
   ChangeClassification,
   ChecklistItem,
   Claim,
+  ClauseOption,
   Comparison,
   ComparisonChange,
   DeadlineEvent,
@@ -12,6 +13,7 @@ import {
   DocumentReviewResponse,
   DocumentUnderstanding,
   Evidence,
+  InconsistencyItem,
   LawyerPrepResponse,
   LawyerQuestion,
   Page,
@@ -424,6 +426,184 @@ export function clientUnderstand(doc: Document): DocumentUnderstanding {
   };
 }
 
+export function generateClientOptions(
+  title: string,
+  level: ReviewLevel,
+  text: string,
+  suggestedLawyerQuestion: string
+): ClauseOption[] {
+  const tLower = text.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  let counter = 'The parties agree to mutual representations and commercially reasonable standards of good faith in fulfilling the obligations set forth in this provision.';
+
+  if (['indemn', 'hold harmless'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "Each party's aggregate indemnification liability shall be limited to direct damages and capped at the total fees paid under this Agreement in the preceding twelve (12) months, excluding claims arising from gross negligence or willful misconduct.";
+  } else if (['liability limit', 'limitation of liability', 'cap'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "In no event shall either party's aggregate liability exceed the total fees paid or payable under this Agreement in the twelve (12) months preceding the incident, with reciprocal carve-outs for confidentiality and IP breach.";
+  } else if (['terminat', 'convenience'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "Either party may terminate this Agreement upon sixty (60) days' prior written notice, or immediately upon thirty (30) days' written notice of material breach if such breach remains uncured.";
+  } else if (['renew', 'automatic'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "This Agreement shall automatically renew for successive one (1) year terms unless either party provides written notice of non-renewal at least thirty (30) days prior to term expiration, provided Provider issues a written reminder at least sixty (60) days prior.";
+  } else if (['unilateral', 'modify', 'amendment'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "No amendment, supplement, or modification of this Agreement shall be binding unless executed in writing by authorized representatives of both parties.";
+  } else if (['deposit', 'refund', 'deduct'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "The security deposit shall be returned within twenty-one (21) days following vacatur, accompanied by an itemized statement and verified receipts for any legitimate deductions.";
+  } else if (['late fee', 'interest', 'penalty'].some((w) => tLower.includes(w) || titleLower.includes(w))) {
+    counter = "A late fee not exceeding 2% per month or $50 (whichever is lower) shall apply only after a mandatory five (5) day written notice and grace period following the due date.";
+  }
+
+  return [
+    {
+      option_type: 'Accept As-Is',
+      description: 'Proceed with the clause as currently drafted if commercial timeline, pricing, or strategic value outweighs downside legal risk.',
+      proposed_counter_language: null,
+      action_step: 'Document internal approval and ensure operational/insurance compliance with this obligation.',
+    },
+    {
+      option_type: 'Request Redline / Counter-Proposal',
+      description: 'Propose balanced contract language to cap unilateral exposure, insert reciprocal protections, or establish reasonable cure periods.',
+      proposed_counter_language: counter,
+      action_step: 'Submit the suggested balanced redline clause during contract review or negotiation rounds.',
+    },
+    {
+      option_type: 'Escalate to Legal Counsel',
+      description: 'Seek attorney counsel to evaluate state/jurisdiction specific enforceability, case law precedents, and statutory protections.',
+      proposed_counter_language: null,
+      action_step: `Consult qualified legal counsel using this specific question: '${suggestedLawyerQuestion}'`,
+    },
+  ];
+}
+
+export function detectClientInconsistencies(doc: Document): InconsistencyItem[] {
+  const inconsistencies: InconsistencyItem[] = [];
+  const docId = doc.metadata.document_id;
+
+  const sectionsList: { pageNumber: number; sec: Section }[] = [];
+  for (const page of doc.pages) {
+    for (const sec of page.sections) {
+      sectionsList.push({ pageNumber: page.page_number, sec });
+    }
+  }
+
+  // 1. Limitation of Liability vs Indemnification Scope Ambiguity
+  let liabilitySec: { pageNumber: number; sec: Section } | null = null;
+  let indemnSec: { pageNumber: number; sec: Section } | null = null;
+
+  for (const item of sectionsList) {
+    const sLower = item.sec.text.toLowerCase();
+    const hLower = (item.sec.heading || '').toLowerCase();
+    if ((sLower.includes('liability') || hLower.includes('liability')) && ['limit', 'cap', 'aggregate', 'fees paid'].some((w) => sLower.includes(w))) {
+      if (!liabilitySec) liabilitySec = item;
+    }
+    if (sLower.includes('indemn') || hLower.includes('indemn') || sLower.includes('hold harmless')) {
+      if (!indemnSec) indemnSec = item;
+    }
+  }
+
+  if (liabilitySec && indemnSec) {
+    const lText = liabilitySec.sec.text;
+    const iText = indemnSec.sec.text;
+    if (!lText.toLowerCase().includes('indemn') && !iText.toLowerCase().includes('subject to section') && !iText.toLowerCase().includes('capped')) {
+      inconsistencies.push({
+        inconsistency_id: `inc_${Math.random().toString(36).substring(2, 9)}`,
+        title: 'Liability Limitation vs. Indemnification Ambiguity',
+        description:
+          'Potential legal tension: The Limitation of Liability provision sets an aggregate financial cap, while the Indemnification clause creates uncapped third-party defense and indemnity duties without clarifying if indemnification is subject to or carved out from the liability ceiling.',
+        clause_a_title: liabilitySec.sec.heading || 'Limitation of Liability',
+        clause_a_evidence: {
+          evidence_id: `ev_${Math.random().toString(36).substring(2, 9)}`,
+          document_id: docId,
+          page: liabilitySec.pageNumber,
+          section: liabilitySec.sec.heading || 'Limitation of Liability',
+          clause_number: liabilitySec.sec.clause_number,
+          source_text: liabilitySec.sec.text.split('.')[0].trim() + '.',
+          verified: true,
+          verification_score: 1.0,
+          verification_note: 'Verified against source document text.',
+        },
+        clause_b_title: indemnSec.sec.heading || 'Indemnification',
+        clause_b_evidence: {
+          evidence_id: `ev_${Math.random().toString(36).substring(2, 9)}`,
+          document_id: docId,
+          page: indemnSec.pageNumber,
+          section: indemnSec.sec.heading || 'Indemnification',
+          clause_number: indemnSec.sec.clause_number,
+          source_text: indemnSec.sec.text.split('.')[0].trim() + '.',
+          verified: true,
+          verification_score: 1.0,
+          verification_note: 'Verified against source document text.',
+        },
+        suggested_remedy:
+          "Harmonize both clauses by expressly specifying in the Limitation of Liability section: 'Except for indemnification obligations under Section X, neither party's aggregate liability shall exceed...'",
+      });
+    }
+  }
+
+  // 2. Conflicting Operational Notice Windows (e.g. 30 vs 60 vs 90 days)
+  const noticeClauses: { days: number; pageNumber: number; sec: Section }[] = [];
+  for (const item of sectionsList) {
+    const sLower = item.sec.text.toLowerCase();
+    const dayMatches = sLower.match(/(\d+)\s+(?:calendar\s+|business\s+)?days/g);
+    if (dayMatches && ['terminat', 'renew', 'notice', 'deposit', 'cure'].some((w) => sLower.includes(w))) {
+      for (const m of dayMatches) {
+        const num = parseInt(m, 10);
+        if (!isNaN(num)) {
+          noticeClauses.push({ days: num, pageNumber: item.pageNumber, sec: item.sec });
+        }
+      }
+    }
+  }
+
+  if (noticeClauses.length >= 2) {
+    const seenDays = new Map<number, { pageNumber: number; sec: Section }>();
+    for (const nc of noticeClauses) {
+      if (!seenDays.has(nc.days)) seenDays.set(nc.days, { pageNumber: nc.pageNumber, sec: nc.sec });
+    }
+    const daysSorted = Array.from(seenDays.keys()).sort((a, b) => a - b);
+    if (daysSorted.length >= 2) {
+      const d1 = daysSorted[0];
+      const d2 = daysSorted[daysSorted.length - 1];
+      const item1 = seenDays.get(d1)!;
+      const item2 = seenDays.get(d2)!;
+      if (item1.sec !== item2.sec) {
+        inconsistencies.push({
+          inconsistency_id: `inc_${Math.random().toString(36).substring(2, 9)}`,
+          title: `Conflicting Operational Timeframes (${d1} Days vs. ${d2} Days)`,
+          description: `Discrepancy in notice/compliance windows: '${item1.sec.heading || 'First Provision'}' stipulates a ${d1}-day window, whereas '${item2.sec.heading || 'Second Provision'}' imposes a ${d2}-day requirement. This divergence creates ambiguity regarding which operational deadline governs.`,
+          clause_a_title: item1.sec.heading || 'Operational Provision A',
+          clause_a_evidence: {
+            evidence_id: `ev_${Math.random().toString(36).substring(2, 9)}`,
+            document_id: docId,
+            page: item1.pageNumber,
+            section: item1.sec.heading || `Section p${item1.pageNumber}`,
+            clause_number: item1.sec.clause_number,
+            source_text: item1.sec.text.split('.')[0].trim() + '.',
+            verified: true,
+            verification_score: 1.0,
+            verification_note: 'Verified against source document text.',
+          },
+          clause_b_title: item2.sec.heading || 'Operational Provision B',
+          clause_b_evidence: {
+            evidence_id: `ev_${Math.random().toString(36).substring(2, 9)}`,
+            document_id: docId,
+            page: item2.pageNumber,
+            section: item2.sec.heading || `Section p${item2.pageNumber}`,
+            clause_number: item2.sec.clause_number,
+            source_text: item2.sec.text.split('.')[0].trim() + '.',
+            verified: true,
+            verification_score: 1.0,
+            verification_note: 'Verified against source document text.',
+          },
+          suggested_remedy: `Standardize operational notice timeframes across provisions, or include express precedence language (e.g. 'Notwithstanding anything to the contrary in Section ${item1.sec.clause_number || 'X'}...').`,
+        });
+      }
+    }
+  }
+
+  return inconsistencies;
+}
+
 export function clientReview(doc: Document): DocumentReviewResponse {
   const items: ReviewItem[] = [];
 
@@ -447,39 +627,49 @@ export function clientReview(doc: Document): DocumentReviewResponse {
       };
 
       if (['indemn', 'liquidated damages', 'unilateral', 'injunctive', 'forfeit', 'dispute', 'arbitrat', 'liability limit'].some((w) => sLower.includes(w) || hLower.includes(w))) {
+        const title = sec.heading || 'Critical Legal Exposure Clause';
+        const lawyerQ = `Does this provision limit our statutory remedies or expose us to disproportionate liability under ${sec.heading || 'this clause'}?`;
         items.push({
           item_id: `rev_${Math.random().toString(36).substring(2, 9)}`,
-          title: sec.heading || 'Critical Legal Exposure Clause',
+          title,
           level: 'IMPORTANT TO REVIEW',
           plain_explanation: 'This provision establishes significant legal exposure, unilateral rights, or strict financial penalties.',
           why_highlighted: 'This was highlighted because it creates potential financial liability, remedies without bond, or liquidated damages.',
           evidence: ev,
-          suggested_lawyer_question: `Does this provision limit our statutory remedies or expose us to disproportionate liability under ${sec.heading || 'this clause'}?`,
+          suggested_lawyer_question: lawyerQ,
+          options_and_next_steps: generateClientOptions(title, 'IMPORTANT TO REVIEW', sec.text, lawyerQ),
         });
       } else if (['terminat', 'default', 'notice', 'days', 'fee', 'rent', 'deposit', 'cure period', 'pet'].some((w) => sLower.includes(w) || hLower.includes(w))) {
+        const title = sec.heading || 'Notice & Operational Timeline Clause';
+        const lawyerQ = `Is the stated notice and cure timeframe feasible and compliant with standard local requirements for ${sec.heading || 'this clause'}?`;
         items.push({
           item_id: `rev_${Math.random().toString(36).substring(2, 9)}`,
-          title: sec.heading || 'Notice & Operational Timeline Clause',
+          title,
           level: 'REVIEW',
           plain_explanation: 'This clause defines specific deadlines, operational restrictions, or notice timeframes.',
           why_highlighted: 'This was highlighted because it creates an obligation tied to a strict timeline or compliance restriction.',
           evidence: ev,
-          suggested_lawyer_question: `Is the stated notice and cure timeframe feasible and compliant with standard local requirements for ${sec.heading || 'this clause'}?`,
+          suggested_lawyer_question: lawyerQ,
+          options_and_next_steps: generateClientOptions(title, 'REVIEW', sec.text, lawyerQ),
         });
       } else if (['governing law', 'severability', 'counterparts', 'entire agreement', 'headings', 'jurisdiction'].some((w) => sLower.includes(w) || hLower.includes(w))) {
+        const title = sec.heading || 'Standard Administrative Provision';
+        const lawyerQ = 'Is the designated jurisdiction standard and convenient for this class of agreement?';
         items.push({
           item_id: `rev_${Math.random().toString(36).substring(2, 9)}`,
-          title: sec.heading || 'Standard Administrative Provision',
+          title,
           level: 'ROUTINE',
           plain_explanation: 'This is a standard administrative clause governing contract interpretation, jurisdiction, and severability.',
           why_highlighted: 'This was highlighted because it defines baseline procedural and interpretation rules.',
           evidence: ev,
-          suggested_lawyer_question: 'Is the designated jurisdiction standard and convenient for this class of agreement?',
+          suggested_lawyer_question: lawyerQ,
+          options_and_next_steps: generateClientOptions(title, 'ROUTINE', sec.text, lawyerQ),
         });
       }
     }
   }
 
+  const inconsistencies = detectClientInconsistencies(doc);
   const routineCount = items.filter((i) => i.level === 'ROUTINE').length;
   const reviewCount = items.filter((i) => i.level === 'REVIEW').length;
   const importantCount = items.filter((i) => i.level === 'IMPORTANT TO REVIEW').length;
@@ -487,10 +677,12 @@ export function clientReview(doc: Document): DocumentReviewResponse {
   return {
     document_id: doc.metadata.document_id,
     review_items: items,
+    inconsistencies,
     total_clauses_reviewed: items.length,
     routine_count: routineCount,
     review_count: reviewCount,
     important_count: importantCount,
+    inconsistency_count: inconsistencies.length,
     is_demo: true,
   };
 }
