@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-24T08:50:13.191947+00:00",
+  "timestamp": "2026-09-24T08:54:55.766586+00:00",
   "summary": {
     "total_test_points": 29,
     "passed_test_points": 24,
@@ -15,7 +15,7 @@
     "security_defense_rate": 100.0
   },
   "efficiency": {
-    "pipeline_overhead_ms": 0.18,
+    "pipeline_overhead_ms": 0.11,
     "live_gemini_p50_ms": 620,
     "live_gemini_p95_ms": 1140,
     "streaming_time_to_first_token_ms": 340,

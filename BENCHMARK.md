@@ -1,6 +1,6 @@
 # Legal Clarity - Benchmark & Verification Report
 
-*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-24 08:50:13 UTC*
+*Generated automatically by `benchmarks/run_benchmark.py` on 2026-09-24 08:54:55 UTC*
 
 ## 1. Executive Summary & Verification Target
 
@@ -31,7 +31,7 @@ All live measurements below were executed against live Google AI Studio endpoint
 
 | Execution Tier | Model / Provider | Latency (p50) | Latency (p95) | Notes & Evaluation Rationale |
 | :--- | :--- | :--- | :--- | :--- |
-| **Pipeline Overhead (Demo Provider)** | Deterministic In-Memory | `0.18 ms` | `< 1.0 ms` | **Zero network hop**: Measures PDF/DOCX parsing, BM25 indexing, tokenization, and strict containment verification. |
+| **Pipeline Overhead (Demo Provider)** | Deterministic In-Memory | `0.11 ms` | `< 1.0 ms` | **Zero network hop**: Measures PDF/DOCX parsing, BM25 indexing, tokenization, and strict containment verification. |
 | **Document Understanding (Fast Tier)** | `gemini-flash-lite-latest` | `1,299 ms` | `1,573 ms` | Fast mechanical metadata extraction and party recognition. |
 | **Clause Risk Review (Reasoning Tier)** | `gemini-flash-latest` | `1,810 ms` | `1,934 ms` | Nuanced legal risk triage (ROUTINE / REVIEW / IMPORTANT). |
 | **Grounded Q&A (Reasoning Tier)** | `gemini-flash-latest` | `1,128 ms` | `1,580 ms` | Strictly grounded answering with character-exact evidence quote verification. |
