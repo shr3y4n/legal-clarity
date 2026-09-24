@@ -1,12 +1,12 @@
 import io
 import re
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import pypdf
 try:
     import pymupdf  # PyMuPDF
 except ImportError:
-    pymupdf = None
+    pymupdf = None  # type: ignore[assignment]
 
 from app.models.schemas import Page, Section
 
@@ -93,7 +93,7 @@ def _is_header_or_footer(line: str, repeating_norms: Set[str]) -> bool:
 
 
 def _segment_lines_into_sections(
-    lines_with_bbox: List[Tuple[str, Optional[List[float]]]],
+    lines_with_bbox: Sequence[Tuple[str, Optional[List[float]]]],
     page_num: int
 ) -> List[Section]:
     """
@@ -214,7 +214,7 @@ def extract_pdf(file_bytes: bytes) -> Tuple[List[Page], str]:
 
             for idx, page_lines in enumerate(raw_pages_lines):
                 page_num = idx + 1
-                clean_lines: List[Tuple[str, List[float]]] = [
+                clean_lines: List[Tuple[str, Optional[List[float]]]] = [
                     (l, bb) for l, bb in page_lines if not _is_header_or_footer(l, repeating)
                 ]
 
@@ -230,8 +230,8 @@ def extract_pdf(file_bytes: bytes) -> Tuple[List[Page], str]:
 
     # 2. Fallback: pypdf extraction
     reader = pypdf.PdfReader(io.BytesIO(file_bytes))
-    pages: List[Page] = []
-    full_text_parts: List[str] = []
+    fb_pages: List[Page] = []
+    fb_full_text_parts: List[str] = []
     total_pages = len(reader.pages)
     if total_pages == 0:
         return [], ""
@@ -246,11 +246,13 @@ def extract_pdf(file_bytes: bytes) -> Tuple[List[Page], str]:
 
     for idx, lines in enumerate(raw_pages_lines_text):
         page_num = idx + 1
-        clean_lines = [(l.strip(), None) for l in lines if l.strip() and not _is_header_or_footer(l, repeating)]
-        sections = _segment_lines_into_sections(clean_lines, page_num)
-        page_body = "\n".join(l for l, _ in clean_lines)
-        pages.append(Page(page_number=page_num, text=page_body, sections=sections))
+        fb_clean_lines: List[Tuple[str, Optional[List[float]]]] = [
+            (l.strip(), None) for l in lines if l.strip() and not _is_header_or_footer(l, repeating)
+        ]
+        sections = _segment_lines_into_sections(fb_clean_lines, page_num)
+        page_body = "\n".join(l for l, _ in fb_clean_lines)
+        fb_pages.append(Page(page_number=page_num, text=page_body, sections=sections))
         if page_body.strip():
-            full_text_parts.append(page_body.strip())
+            fb_full_text_parts.append(page_body.strip())
 
-    return pages, "\n\n".join(full_text_parts)
+    return fb_pages, "\n\n".join(fb_full_text_parts)
