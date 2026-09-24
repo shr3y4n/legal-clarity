@@ -153,4 +153,32 @@ describe('Evidence & Citation Precision Pipeline (Client Engine)', () => {
     expect(ans.citations).toHaveLength(0);
     expect(ans.evidence).toHaveLength(0);
   });
+
+  it('handles high-level document question: What is this agreement?', () => {
+    const ans = clientAsk(doc, 'What is this agreement about?');
+    expect(ans.is_supported).toBe(true);
+    expect(ans.answer_text).toMatch(/binding agreement|contract/i);
+    expect(ans.citations && ans.citations.length).toBeGreaterThan(0);
+  });
+
+  it('handles parties question: Who are the parties to this agreement?', () => {
+    const ans = clientAsk(doc, 'Who are the parties to this agreement?');
+    expect(ans.is_supported).toBe(true);
+    expect(ans.answer_text).toMatch(/Provider and the Client/i);
+    expect(ans.citations && ans.citations.length).toBeGreaterThan(0);
+  });
+
+  it('handles term question: What is the term of this agreement?', () => {
+    const ans = clientAsk(doc, 'What is the term of this agreement?');
+    expect(ans.is_supported).toBe(true);
+    expect(ans.answer_text).toContain('October 1, 2025');
+    expect(ans.citations![0].clause_number).toBe('2.1');
+  });
+
+  it('handles services question: What services are provided?', () => {
+    const ans = clientAsk(doc, 'What services are provided under this contract?');
+    expect(ans.is_supported).toBe(true);
+    expect(ans.answer_text).toContain('cloud migration');
+    expect(ans.citations![0].clause_number).toBe('1.1');
+  });
 });

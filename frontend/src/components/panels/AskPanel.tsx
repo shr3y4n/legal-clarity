@@ -142,9 +142,21 @@ export const AskPanel: React.FC<AskPanelProps> = ({ documentId, onSelectEvidence
                     )}
                   </span>
 
-                  <span className="text-[10px] font-mono-legal text-[#1e40af] bg-[#eff6ff] px-1.5 py-0.5 rounded-xs border border-[#bfdbfe]">
-                    Gemini Verified
-                  </span>
+                  {msg.answer.is_supported ? (
+                    msg.answer.is_demo ? (
+                      <span className="text-[10px] font-mono-legal text-[#166534] bg-[#f0fdf4] px-1.5 py-0.5 rounded-xs border border-[#bbf7d0]">
+                        Deterministic Engine
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono-legal text-[#1e40af] bg-[#eff6ff] px-1.5 py-0.5 rounded-xs border border-[#bfdbfe]">
+                        Gemini Verified
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[10px] font-mono-legal text-[#991b1b] bg-[#fef2f2] px-1.5 py-0.5 rounded-xs border border-[#fecaca]">
+                      Strict Grounding Refusal
+                    </span>
+                  )}
                 </div>
 
                 {/* Answer Text */}

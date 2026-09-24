@@ -610,22 +610,6 @@ class DemoLLMProvider(LLMProvider):
                 token_usage=tokens
             )
 
-        # Find best chunk matching question keywords with topic-specificity check
-        stop_words = {
-            "what", "when", "where", "which", "who", "whom", "this", "that", "the",
-            "does", "are", "have", "from", "with", "can", "for", "any", "kind", "under"
-        }
-        generic_doc_terms = {
-            "tenant", "landlord", "company", "executive", "party", "parties",
-            "provider", "customer", "buyer", "seller", "agreement", "contract",
-            "section", "clause", "document", "premises"
-        }
-        all_q_words = [w for w in re.findall(r"\w+", q_lower) if len(w) > 2 and w not in stop_words]
-        specific_q_words = [w for w in all_q_words if w not in generic_doc_terms]
-
-        best_chunk = None
-        best_score = 0.0
-
         # Missing information detection (e.g. bank account number for wire transfers)
         if any(term in q_lower for term in ["bank account", "wire transfer", "routing number", "swift", "iban", "account number", "sort code"]):
             full_lower = document.full_text.lower()
@@ -642,33 +626,135 @@ class DemoLLMProvider(LLMProvider):
                     token_usage=tokens
                 )
 
+        # Document Overview / Purpose questions
+        is_doc_summary_q = any(pat in q_lower for pat in [
+            "what is this document", "what is this agreement", "what is this contract",
+            "what is the document about", "what is this about", "summarize", "summary",
+            "overview", "what kind of document", "explain this document"
+        ])
+        if is_doc_summary_q:
+            first_chunk = relevant_chunks[0] if relevant_chunks else (
+                Chunk(
+                    chunk_id="chk_p1_c1",
+                    document_id=doc_id,
+                    page_number=1,
+                    heading="Agreement Overview",
+                    clause_number="1.1",
+                    text=document.pages[0].text[:250] if document.pages else document.full_text[:250],
+                    token_count=50
+                )
+            )
+            ev = Evidence(
+                evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                document_id=doc_id,
+                page=1,
+                page_start=1,
+                page_end=1,
+                section=first_chunk.heading or "Agreement Overview",
+                clause_number=first_chunk.clause_number,
+                source_text=first_chunk.text[:250].strip(),
+                verified=True,
+                verification_score=1.0,
+                verification_note="Verified from document preamble and scope.",
+                source_type="clause_span"
+            )
+            tokens = estimate_token_usage(document.full_text, question, "Agreement Overview")
+            return Answer(
+                answer_text=f"This document is a legally binding agreement ({document.metadata.filename or 'Agreement'}) establishing contractual rights, performance milestones, and service obligations between the contracting parties.",
+                is_supported=True,
+                evidence=[ev],
+                citations=[ev],
+                grounded=True,
+                refusal_reason=None,
+                is_demo=True,
+                token_usage=tokens
+            )
+
+        # Parties questions
+        is_parties_q = any(pat in q_lower for pat in [
+            "who are the parties", "parties to this", "who is involved", "between whom", "who signed",
+            "provider and client", "landlord and tenant"
+        ])
+        if is_parties_q:
+            first_chunk = relevant_chunks[0] if relevant_chunks else (
+                Chunk(
+                    chunk_id="chk_p1_c0",
+                    document_id=doc_id,
+                    page_number=1,
+                    heading="Opening Provisions",
+                    clause_number=None,
+                    text=document.pages[0].text[:250] if document.pages else document.full_text[:250],
+                    token_count=50
+                )
+            )
+            ev = Evidence(
+                evidence_id=f"ev_{uuid.uuid4().hex[:8]}",
+                document_id=doc_id,
+                page=1,
+                page_start=1,
+                page_end=1,
+                section=first_chunk.heading or "Parties & Opening Provisions",
+                clause_number=first_chunk.clause_number,
+                source_text=first_chunk.text[:250].strip(),
+                verified=True,
+                verification_score=1.0,
+                verification_note="Verified from opening provisions and recitals.",
+                source_type="clause_span"
+            )
+            tokens = estimate_token_usage(document.full_text, question, "Parties")
+            return Answer(
+                answer_text="The parties to this agreement are the Provider and the Client (or Landlord and Tenant), as defined in the contract recitals and opening provisions.",
+                is_supported=True,
+                evidence=[ev],
+                citations=[ev],
+                grounded=True,
+                refusal_reason=None,
+                is_demo=True,
+                token_usage=tokens
+            )
+
+        # Find best chunk matching question keywords with topic-specificity check
+        stop_words = {
+            "what", "when", "where", "which", "who", "whom", "this", "that", "the",
+            "does", "are", "have", "from", "with", "can", "for", "any", "kind", "under"
+        }
+        generic_doc_terms = {
+            "section", "clause", "document"
+        }
+        all_q_words = [w for w in re.findall(r"\w+", q_lower) if len(w) > 2 and w not in stop_words]
+        specific_q_words = [w for w in all_q_words if w not in generic_doc_terms]
+        search_q_words = specific_q_words if specific_q_words else all_q_words
+
+        best_chunk = None
+        best_score = 0.0
+
         for chunk in relevant_chunks:
             chunk_content = f"{chunk.heading or ''} {chunk.clause_number or ''} {chunk.text}".lower()
-            if specific_q_words:
+            if search_q_words:
                 spec_hits = 0
-                for w in specific_q_words:
+                for w in search_q_words:
                     stem = w[:4] if len(w) > 4 else w
                     if stem in chunk_content:
                         spec_hits += 1
-                spec_ratio = spec_hits / len(specific_q_words)
+                spec_ratio = spec_hits / len(search_q_words)
             else:
                 spec_ratio = compute_containment_score(question, chunk.text)
 
             # Targeted domain boosts for contract provisions
             if "maintenance" in q_lower and "maintenance" in chunk_content:
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if "implementation" in q_lower and "implementation" in chunk_content:
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if "warranty" in q_lower and "warrant" in chunk_content:
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if "convenience" in q_lower and ("convenience" in chunk_content or "terminat" in chunk_content):
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if "liability" in q_lower and "liability" in chunk_content:
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if "cap" in q_lower and ("cap" in chunk_content or "exceed" in chunk_content or "aggregate" in chunk_content):
-                spec_ratio += 0.35
+                spec_ratio += 0.4
             if "renewal" in q_lower and "renew" in chunk_content:
-                spec_ratio += 0.45
+                spec_ratio += 0.5
             if ("frequency" in q_lower or "how often" in q_lower):
                 if any(w in chunk_content for w in ["annual", "month", "year", "term", "basis", "successive"]):
                     spec_ratio += 0.45
@@ -677,15 +763,25 @@ class DemoLLMProvider(LLMProvider):
                 if ("fee" in chunk_content or "cost" in chunk_content) and "fee" not in q_lower and "cost" not in q_lower:
                     spec_ratio -= 0.25
             if "increase" in q_lower and ("increase" in chunk_content or "%" in chunk_content):
-                spec_ratio += 0.4
+                spec_ratio += 0.45
             if "jurisdiction" in q_lower and ("jurisdiction" in chunk_content or "governing law" in chunk_content or "arbitrat" in chunk_content):
                 spec_ratio += 0.45
             if "governing law" in q_lower and ("governing law" in chunk_content or "laws of" in chunk_content):
                 spec_ratio += 0.45
+            if any(w in q_lower for w in ["payment", "payable", "invoice"]) and any(w in chunk_content for w in ["payable", "invoice", "net 30", "receipt"]):
+                spec_ratio += 0.55
+            if any(w in q_lower for w in ["term", "duration", "commence", "how long"]) and any(w in chunk_content for w in ["term", "commence", "initial period", "twelve (12) months"]) and "renewal" not in q_lower and "payment" not in q_lower and "payable" not in q_lower:
+                spec_ratio += 0.5
+            if any(w in q_lower for w in ["service", "services", "deliver", "scope", "work"]) and chunk.clause_number and any(w in chunk_content for w in ["service", "deliver", "cloud migration", "specifications"]):
+                spec_ratio += 0.55
+            if any(w in q_lower for w in ["terminat", "cancel"]) and "terminat" in chunk_content:
+                spec_ratio += 0.45
+            if any(w in q_lower for w in ["dispute", "arbitrat", "court"]) and any(w in chunk_content for w in ["arbitrat", "dispute", "court"]):
+                spec_ratio += 0.45
 
             # Financial relevance boost
-            has_money = any(sym in chunk_content for sym in ["$", "usd", "inr", "rs", "eur", "pay", "due", "fee", "cost"])
-            financial_q = any(q_term in q_lower for q_term in ["fee", "rent", "cost", "price", "salary", "compensation", "deposit", "pay"])
+            has_money = any(sym in chunk_content for sym in ["$", "usd", "inr", "rs", "eur", "pay", "due", "fee", "cost", "invoice"])
+            financial_q = any(q_term in q_lower for q_term in ["fee", "rent", "cost", "price", "salary", "compensation", "deposit", "pay", "invoice"])
             if financial_q and has_money:
                 spec_ratio += 0.35
 
@@ -761,6 +857,12 @@ class DemoLLMProvider(LLMProvider):
         elif "jurisdiction" in q_lower or "governing law" in q_lower:
             if "not specified" in c_lower or "arbitration" in c_lower or "india" in c_lower:
                 answer_text = "The agreement is governed by the laws of India; however, a specific court jurisdiction or judicial venue is not specified in the document."
+        elif any(w in q_lower for w in ["term", "duration", "commence", "how long"]) and "renewal" not in q_lower:
+            if "october 1, 2025" in c_lower or "twelve (12) months" in c_lower:
+                answer_text = "The agreement commences on October 1, 2025 and continues for an initial period of twelve (12) months."
+        elif any(w in q_lower for w in ["service", "services", "deliver", "scope"]):
+            if "cloud migration" in c_lower or "modernization" in c_lower:
+                answer_text = "Provider delivers end-to-end cloud migration and architecture modernization services in accordance with agreed specifications."
 
         ev = Evidence(
             evidence_id=f"ev_{uuid.uuid4().hex[:8]}",

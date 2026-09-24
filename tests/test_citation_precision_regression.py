@@ -289,3 +289,55 @@ async def test_missing_information_bank_account_query(benchmark_doc: Document):
     assert ans.refusal_reason is not None
     assert len(ans.citations) == 0
     assert len(ans.evidence) == 0
+
+
+@pytest.mark.asyncio
+async def test_document_summary_query(benchmark_doc: Document):
+    """Handles high-level question: What is this agreement about?"""
+    provider = DemoLLMProvider()
+    q = "What is this agreement about?"
+    chunks = retrieve_relevant_chunks(benchmark_doc.metadata.document_id, q, top_k=4)
+    ans = await provider.ask(benchmark_doc, q, chunks)
+
+    assert ans.is_supported is True
+    assert "agreement" in ans.answer_text.lower() or "contract" in ans.answer_text.lower()
+    assert len(ans.citations) >= 1
+
+
+@pytest.mark.asyncio
+async def test_parties_query(benchmark_doc: Document):
+    """Handles parties question: Who are the parties to this agreement?"""
+    provider = DemoLLMProvider()
+    q = "Who are the parties to this agreement?"
+    chunks = retrieve_relevant_chunks(benchmark_doc.metadata.document_id, q, top_k=4)
+    ans = await provider.ask(benchmark_doc, q, chunks)
+
+    assert ans.is_supported is True
+    assert "Provider" in ans.answer_text
+    assert len(ans.citations) >= 1
+
+
+@pytest.mark.asyncio
+async def test_term_query(benchmark_doc: Document):
+    """Handles term question: What is the term of this agreement?"""
+    provider = DemoLLMProvider()
+    q = "What is the term of this agreement?"
+    chunks = retrieve_relevant_chunks(benchmark_doc.metadata.document_id, q, top_k=4)
+    ans = await provider.ask(benchmark_doc, q, chunks)
+
+    assert ans.is_supported is True
+    assert "October 1, 2025" in ans.answer_text or "twelve" in ans.answer_text.lower()
+    assert ans.citations[0].clause_number == "2.1"
+
+
+@pytest.mark.asyncio
+async def test_services_query(benchmark_doc: Document):
+    """Handles services question: What services are provided?"""
+    provider = DemoLLMProvider()
+    q = "What services are provided under this contract?"
+    chunks = retrieve_relevant_chunks(benchmark_doc.metadata.document_id, q, top_k=4)
+    ans = await provider.ask(benchmark_doc, q, chunks)
+
+    assert ans.is_supported is True
+    assert "cloud migration" in ans.answer_text.lower()
+    assert ans.citations[0].clause_number == "1.1"
