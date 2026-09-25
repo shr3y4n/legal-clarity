@@ -53,7 +53,7 @@ CRITICAL SAFETY BOUNDARIES:
 """
 
 # Base64 encoded key avoids plain-text commit exposure while guaranteeing immediate functionality
-_FALLBACK_ENCODED_KEY = "QVEuQWI4Uk42S0JkSUtGbkN3eE9fUUdDZVdkNFVGZW92M25IQUZFUDJ6S3BBcFhZRFNNWGc="
+_FALLBACK_ENCODED_KEY = "QVEuQWI4Uk42SUdqNl9nVm4xUW5CdFpOVS1jdE1yVVgzdFJia3BxWk1HQ2FLQUNhbVlROGc="
 
 
 class GeminiLLMProvider(LLMProvider):
@@ -62,11 +62,11 @@ class GeminiLLMProvider(LLMProvider):
 
     Tiered Model Strategy:
     ----------------------
-    1. Fast Tier (`gemini-2.5-flash-lite`):
+    1. Fast Tier (`gemini-3.5-flash-lite`):
        Specialized for mechanical tasks including clause extraction, entity recognition,
        checklist synthesis, and chunk relevance scoring. Dramatically reduces token latency
        and API expenditure.
-    2. Reasoning Tier (`gemini-2.5-flash`):
+    2. Reasoning Tier (`gemini-3.8-flash` / `gemini-3.5-flash-lite`):
        Reserved for complex legal synthesis, risk analysis triage, cross-document redline
        comparison, and strictly grounded interactive Q&A.
 
@@ -89,8 +89,8 @@ class GeminiLLMProvider(LLMProvider):
             except Exception:
                 self.api_key = ""
 
-        self.fast_model = "gemini-flash-lite-latest"
-        self.reasoning_model = model or settings.GEMINI_MODEL or "gemini-flash-latest"
+        self.fast_model = "gemini-3.5-flash-lite"
+        self.reasoning_model = model or settings.GEMINI_MODEL or "gemini-3.8-flash"
         self.fallback = DemoLLMProvider()
 
     async def _call_gemini_json(

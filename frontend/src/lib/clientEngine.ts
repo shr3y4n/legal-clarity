@@ -1384,7 +1384,7 @@ export function clientLawyerPrep(doc: Document): LawyerPrepResponse {
 // Developer-configured default Gemini API credentials (safely decoded for client runtime)
 const _getDefaultKey = (): string => {
   try {
-    return atob('QVEuQWI4Uk42S2YzWDZzUVR3bW1fYUFIbUxJY1FfdzNGM3A5S3FNQVNSQVZjeFZyZ05QMlE=');
+    return atob('QVEuQWI4Uk42SUdqNl9nVm4xUW5CdFpOVS1jdE1yVVgzdFJia3BxWk1HQ2FLQUNhbVlROGc=');
   } catch {
     return '';
   }
@@ -1393,7 +1393,7 @@ const _getDefaultKey = (): string => {
 export const DEFAULT_GEMINI_API_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_GEMINI_API_KEY as string)) ||
   _getDefaultKey();
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 
 // Live Grounded Q&A via Google Gemini
 export async function askWithGemini(
@@ -1448,7 +1448,7 @@ Respond strictly in this JSON format:
   "exact_quote": "string or null"
 }`;
 
-  const modelsToTry = [DEFAULT_GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-flash-latest'];
+  const modelsToTry = [DEFAULT_GEMINI_MODEL, 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-flash-lite-latest', 'gemini-flash-latest'];
 
   for (const model of modelsToTry) {
     try {

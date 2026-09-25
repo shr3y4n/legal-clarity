@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # AI Provider
     LLM_PROVIDER: str = "gemini"
     GEMINI_API_KEY: str = Field(default="", alias="GEMINI_API_KEY")
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # Grounding Verification
     EVIDENCE_VERIFICATION_THRESHOLD: float = 0.85
